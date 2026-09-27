@@ -175,7 +175,7 @@ export function CrmApp() {
   );
 }
 
-function Overview({ metrics, customers, onCustomer, onViewAll }: { metrics: Record<string, number>; customers: Customer[]; onCustomer: (customer: Customer) => void; onViewAll: () => void }) {
+function Overview({ metrics, customers, onCustomer, onViewAll }: { metrics: { pipeline: number; actions: number; payments: number; activations: number }; customers: Customer[]; onCustomer: (customer: Customer) => void; onViewAll: () => void }) {
   const cards = [
     { label: "Active pipeline", value: metrics.pipeline, icon: Signal, detail: "Open customer records" },
     { label: "Actions due", value: metrics.actions, icon: CalendarClock, detail: "Due today or overdue" },
