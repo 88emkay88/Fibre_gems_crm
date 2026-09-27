@@ -1,7 +1,7 @@
 # CRM roadmap
 
-- [ ] Build FibreGems visual system and shared application shell
-- [ ] Build authentication and protected navigation
+- [x] Build FibreGems visual system and shared application shell
+- [x] Build authentication and protected navigation
 - [ ] Build operational dashboard
 - [ ] Build customer directory, capture, duplicate handling, and updates
 - [ ] Build Agility import and administration views
