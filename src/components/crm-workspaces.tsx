@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AgilitySync } from "@/components/agility-sync";
 
 type Customer = { id: string; full_name: string; first_name: string; surname: string; cell_number: string; area_suburb: string | null; product_package: string | null; payment_type: string | null; status: string; owner_id: string; next_action: string | null; next_action_date: string | null; last_contact_date: string | null; created_at: string };
 type ActivityRow = { id: string; customer_id: string; actor_id: string; action_type: string; outcome: string | null; notes: string | null; customer_status_after: string | null; next_action: string | null; created_at: string };
@@ -56,7 +57,7 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
     {mode === "admin" && view === "dashboard" && <AdminDashboard customers={customers} activities={activities} profiles={profilesQ.data ?? []} today={today} onReports={() => setView("callbacks")} />}
     {mode === "admin" && view === "callbacks" && <Accountability customers={customers} activities={activities} profiles={profilesQ.data ?? []} onSelect={setSelected} />}
     {mode === "admin" && view === "grid" && <Worklist customers={customers} onSelect={setSelected} admin />}
-    {mode === "admin" && view === "sync" && <section><h2 className="mb-4 text-xl font-bold">Agility Sync Engine</h2><div className="border border-border bg-card p-6"><p className="text-sm text-muted-foreground">Agility report imports are not yet connected. No records have been imported.</p></div></section>}
+    {mode === "admin" && view === "sync" && <AgilitySync />}
     {mode === "admin" && view === "agents" && <Agents profiles={profilesQ.data ?? []} />}
     </div></main>
     <OutcomeDialog customer={selected} today={today} onClose={() => setSelected(null)} onSaved={refresh} />

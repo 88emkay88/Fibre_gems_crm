@@ -1,7 +1,12 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { CrmApp } from "@/components/crm-app";
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
+  beforeLoad: async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data } = await supabase.from("user_roles").select("role").eq("user_id", user?.id ?? "").eq("role", "admin").maybeSingle();
+    throw redirect({ to: data ? "/admin" : "/agent" });
+  },
   head: () => ({ meta: [
     { title: "Command Centre — FibreGems CRM" },
     { name: "description", content: "Manage FibreGems customers, actions, orders, payments and activations." },
@@ -10,5 +15,4 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
     { property: "og:type", content: "website" },
     { name: "twitter:card", content: "summary" },
   ]}),
-  component: CrmApp,
 });
