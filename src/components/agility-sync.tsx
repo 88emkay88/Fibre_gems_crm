@@ -49,7 +49,7 @@ export function AgilitySync() {
       const errors: string[] = [];
       if (!ovr && !ovk) errors.push("No OVR/OVK reference found");
       else if (!match) errors.push("No matching CRM order");
-      return { row_number: i + 1, raw, ovr, ovk, product: product ? productMap[product] : null, state, customerId: match?.customer_id ?? null, errors };
+      return { row_number: i + 1, raw, ovr, ovk, product: product ? (productMap[product] ?? null) : null, state, customerId: match?.customer_id ?? null, errors };
     });
     setFile({ name: f.name, hash: await sha(text) }); setRows(parsed); e.target.value = "";
   }
