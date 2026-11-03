@@ -3,12 +3,13 @@ import type { Customer } from "./types";
 import { stageForStatus } from "./pipeline-stages";
 import type { QueueItem, Urgency } from "./call-queue";
 import { overdueLabel } from "./call-queue";
+import type { KanbanDrag } from "./use-kanban-drag";
 
 interface LeadQueueProps {
   items: QueueItem<Customer>[];
   today: string;
   activeDialingId?: string | null;
-  onSelectCustomer: (customer: Customer) => void;
+  drag: KanbanDrag;
   onCallCustomer: (customer: Customer) => void;
 }
 
@@ -24,19 +25,13 @@ const urgencyText: Record<Urgency, string> = {
   critical: "font-semibold text-destructive",
 };
 
-export function LeadQueue({
-  items,
-  today,
-  activeDialingId,
-  onSelectCustomer,
-  onCallCustomer,
-}: LeadQueueProps) {
+export function LeadQueue({ items, today, activeDialingId, drag, onCallCustomer }: LeadQueueProps) {
   return (
     <aside className="flex min-h-0 flex-col rounded-3xl border border-border bg-card p-4 shadow-sm lg:max-h-[calc(100vh-260px)]">
       <header className="mb-3 flex items-center justify-between px-1">
         <div>
           <h3 className="text-sm font-semibold text-foreground">Today&apos;s call stack</h3>
-          <p className="text-xs text-muted-foreground">Drag a card onto an outcome</p>
+          <p className="text-xs text-muted-foreground">Drag a card onto a pipeline stage</p>
         </div>
         <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-semibold tabular-nums text-muted-foreground">
           {items.length}
@@ -54,12 +49,10 @@ export function LeadQueue({
           return (
             <article
               key={c.id}
-              draggable
-              onDragStart={(e) => e.dataTransfer.setData("text/plain", c.id)}
-              onClick={() => onSelectCustomer(c)}
-              className={`group flex cursor-grab items-center gap-3 rounded-2xl border p-3 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:cursor-grabbing ${tint} ${
+              onPointerDown={(e) => drag.startDrag(e, c)}
+              className={`group flex cursor-grab touch-none select-none items-center gap-3 rounded-2xl border p-3 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:cursor-grabbing ${tint} ${
                 isDialing ? "ring-2 ring-primary/40" : ""
-              }`}
+              } ${drag.draggingId === c.id ? "opacity-40" : ""}`}
             >
               <span
                 className={`h-10 w-1 shrink-0 rounded-full ${urgency === "critical" ? "bg-destructive" : urgency === "warm" ? "bg-warning" : stage.accent}`}

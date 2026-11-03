@@ -1,9 +1,10 @@
-import { useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject } from "react";
+import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import type { Customer } from "./types";
 
 const DRAG_START_PX = 6;
 const EDGE_ZONE_PX = 80;
 const MAX_AUTOSCROLL_PX = 20;
+const SCROLLABLE = /(auto|scroll)/;
 
 export interface DragSource {
   customer: Customer;
@@ -33,16 +34,20 @@ interface Gesture {
 }
 
 interface UseKanbanDragOptions {
-  boardRef: RefObject<HTMLDivElement | null>;
   onSelect: (customer: Customer) => void;
-  onDrop: (customerId: string, stageId: string) => void;
+  onDrop: (customer: Customer, stageId: string) => void;
 }
+
+export type KanbanDrag = ReturnType<typeof useKanbanDrag>;
 
 function edgeVelocity(pointer: number, min: number, max: number): number {
   const intoLowEdge = min + EDGE_ZONE_PX - pointer;
-  if (intoLowEdge > 0) return -MAX_AUTOSCROLL_PX * Math.min(1, intoLowEdge / EDGE_ZONE_PX);
+  if (intoLowEdge > 0) {
+    return -Math.round(MAX_AUTOSCROLL_PX * Math.min(1, intoLowEdge / EDGE_ZONE_PX));
+  }
   const intoHighEdge = pointer - (max - EDGE_ZONE_PX);
-  if (intoHighEdge > 0) return MAX_AUTOSCROLL_PX * Math.min(1, intoHighEdge / EDGE_ZONE_PX);
+  if (intoHighEdge > 0)
+    return Math.round(MAX_AUTOSCROLL_PX * Math.min(1, intoHighEdge / EDGE_ZONE_PX));
   return 0;
 }
 
@@ -50,7 +55,31 @@ function elementAt(x: number, y: number, selector: string): HTMLElement | null {
   return document.elementFromPoint(x, y)?.closest<HTMLElement>(selector) ?? null;
 }
 
-export function useKanbanDrag({ boardRef, onSelect, onDrop }: UseKanbanDragOptions) {
+function scrollAtEdges(g: Gesture) {
+  let node = document.elementFromPoint(g.x, g.y) as HTMLElement | null;
+  while (node && node !== document.documentElement) {
+    const style = getComputedStyle(node);
+    const rect = node.getBoundingClientRect();
+    if (SCROLLABLE.test(style.overflowY) && node.scrollHeight > node.clientHeight) {
+      node.scrollTop += edgeVelocity(
+        g.y,
+        Math.max(rect.top, 0),
+        Math.min(rect.bottom, window.innerHeight),
+      );
+    }
+    if (SCROLLABLE.test(style.overflowX) && node.scrollWidth > node.clientWidth) {
+      node.scrollLeft += edgeVelocity(
+        g.x,
+        Math.max(rect.left, 0),
+        Math.min(rect.right, window.innerWidth),
+      );
+    }
+    node = node.parentElement;
+  }
+  window.scrollBy(0, edgeVelocity(g.y, 0, window.innerHeight));
+}
+
+export function useKanbanDrag({ onSelect, onDrop }: UseKanbanDragOptions) {
   const [source, setSource] = useState<DragSource | null>(null);
   const [overStageId, setOverStageId] = useState<string | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -63,32 +92,18 @@ export function useKanbanDrag({ boardRef, onSelect, onDrop }: UseKanbanDragOptio
     );
   };
 
-  const autoScroll = (g: Gesture) => {
-    const board = boardRef.current;
-    if (board) {
-      const rect = board.getBoundingClientRect();
-      if (g.y >= rect.top && g.y <= rect.bottom) {
-        board.scrollLeft += edgeVelocity(
-          g.x,
-          Math.max(rect.left, 0),
-          Math.min(rect.right, window.innerWidth),
-        );
-      }
-    }
-    const list = elementAt(g.x, g.y, "[data-stage-list]");
-    if (list) {
-      const rect = list.getBoundingClientRect();
-      list.scrollTop += edgeVelocity(
-        g.y,
-        Math.max(rect.top, 0),
-        Math.min(rect.bottom, window.innerHeight),
-      );
+  const updateOverStage = (g: Gesture) => {
+    const stageId = elementAt(g.x, g.y, "[data-stage-id]")?.dataset.stageId ?? null;
+    if (stageId !== g.stageId) {
+      g.stageId = stageId;
+      setOverStageId(stageId);
     }
   };
 
   const startAutoScroll = (g: Gesture) => {
     const loop = () => {
-      autoScroll(g);
+      scrollAtEdges(g);
+      updateOverStage(g);
       g.frame = requestAnimationFrame(loop);
     };
     g.frame = requestAnimationFrame(loop);
@@ -116,11 +131,7 @@ export function useKanbanDrag({ boardRef, onSelect, onDrop }: UseKanbanDragOptio
     }
 
     moveOverlay(g);
-    const stageId = elementAt(g.x, g.y, "[data-stage-id]")?.dataset.stageId ?? null;
-    if (stageId !== g.stageId) {
-      g.stageId = stageId;
-      setOverStageId(stageId);
-    }
+    updateOverStage(g);
   };
 
   const finishGesture = (e: PointerEvent, g: Gesture, cancelled: boolean) => {
@@ -137,7 +148,7 @@ export function useKanbanDrag({ boardRef, onSelect, onDrop }: UseKanbanDragOptio
     document.body.style.userSelect = "";
     setSource(null);
     setOverStageId(null);
-    if (!cancelled && g.stageId) onDrop(g.customer.id, g.stageId);
+    if (!cancelled && g.stageId) onDrop(g.customer, g.stageId);
   };
 
   const handlePointerDown = (e: ReactPointerEvent<HTMLElement>, customer: Customer) => {

@@ -46,8 +46,7 @@ import {
 } from "@/components/ui/dialog";
 import { AgilitySync } from "@/components/agility-sync";
 import { TopMetricsBar } from "./telephony/TopMetricsBar";
-import { PipelineBoard } from "./telephony/PipelineBoard";
-import { LeadQueue } from "./telephony/LeadQueue";
+import { KanbanView } from "./telephony/KanbanView";
 import { buildCallQueue } from "./telephony/call-queue";
 import { CallbackQueueView } from "./agent-callbacks";
 import { CustomerDrawer } from "./telephony/CustomerDrawer";
@@ -488,30 +487,18 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
                 isRefreshing={workspaceQ.isFetching}
               />
 
-              <div className="grid gap-4 lg:grid-cols-4">
-                <LeadQueue
-                  items={queue}
-                  today={today}
-                  activeDialingId={telephonyState.activeCustomerId}
-                  onSelectCustomer={(c) => {
-                    setDrawerCustomer(c as any);
-                    setDrawerOpen(true);
-                  }}
-                  onCallCustomer={handleCall}
-                />
-                <div className="min-w-0 lg:col-span-3">
-                  <PipelineBoard
-                    customers={customers as any}
-                    onSelectCustomer={(c) => {
-                      setDrawerCustomer(c as any);
-                      setDrawerOpen(true);
-                    }}
-                    onCallCustomer={handleCall}
-                    onMoveCustomer={handleMoveCustomer}
-                    activeDialingId={telephonyState.activeCustomerId}
-                  />
-                </div>
-              </div>
+              <KanbanView
+                queue={queue}
+                customers={customers as any}
+                today={today}
+                activeDialingId={telephonyState.activeCustomerId}
+                onSelectCustomer={(c) => {
+                  setDrawerCustomer(c as any);
+                  setDrawerOpen(true);
+                }}
+                onCallCustomer={handleCall}
+                onMoveCustomer={handleMoveCustomer}
+              />
             </div>
           )}
 
