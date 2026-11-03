@@ -1,5 +1,5 @@
 import { toast } from "sonner";
-import { logOutcomeFn } from "@/server/functions";
+import { logOutcomeFn, updateCustomerFn } from "@/server/functions";
 import {
   dialCustomerFn,
   dialNumberFn,
@@ -133,6 +133,22 @@ export async function submitDispositionApi(params: {
   });
 
   toast.success(`Outcome saved: ${params.disposition}`);
+}
+
+export type CustomerDetailsPatch = {
+  first_name: string;
+  surname: string;
+  alternate_cell_number: string | null;
+  email: string | null;
+  full_address: string | null;
+  area_suburb: string | null;
+  product_package: string | null;
+  payment_type: string | null;
+};
+
+export async function updateCustomerDetailsApi(customerId: string, patch: CustomerDetailsPatch) {
+  await updateCustomerFn({ data: { customerId, ...patch } });
+  toast.success("Customer details saved");
 }
 
 export async function updateStageApi(customerId: string, newStatus: string) {

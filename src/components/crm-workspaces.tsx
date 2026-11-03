@@ -34,6 +34,8 @@ import {
 } from "@/server/functions";
 import { Button } from "@/components/ui/button";
 import { QuickDialDialog } from "./telephony/QuickDialDialog";
+import { OutcomeCustomerDetails } from "./telephony/OutcomeCustomerDetails";
+import { PRODUCT_PACKAGES } from "./telephony/types";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -49,6 +51,7 @@ import { TopMetricsBar } from "./telephony/TopMetricsBar";
 import { KanbanView } from "./telephony/KanbanView";
 import { buildCallQueue } from "./telephony/call-queue";
 import { CallbackQueueView } from "./agent-callbacks";
+import { AgentLeadsView } from "./agent-leads";
 import { CustomerDrawer } from "./telephony/CustomerDrawer";
 import { SoftphoneBar } from "./telephony/SoftphoneBar";
 import { dialCustomerApi, updateStageApi, type DialResult } from "./telephony/telephony-service";
@@ -103,13 +106,6 @@ const statusNames: Record<string, string> = {
   activated: "Activated",
   lost: "Not Interested",
 };
-
-const packages = [
-  "Vuma Reach 10Mbps/10Mbps",
-  "Vuma Reach 20Mbps/10Mbps",
-  "Vuma Reach 50Mbps/25Mbps",
-  "Vuma Reach 100Mbps/50Mbps",
-];
 
 const jhbDate = () =>
   new Intl.DateTimeFormat("en-CA", {
@@ -309,6 +305,7 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
       ? [
           { id: "kanban", label: "Pipeline Command", icon: LayoutGrid },
           { id: "callbacks", label: "Today's Call Backs", icon: Phone },
+          { id: "leads", label: "My Leads", icon: Users },
           { id: "worklist", label: "All Assigned Leads", icon: ClipboardList },
           { id: "newlead", label: "New Lead Capture", icon: Plus },
           { id: "activity", label: "My Activity Log", icon: Activity },
@@ -519,6 +516,16 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
               items={queue}
               today={today}
               onSelect={setSelected}
+              onOpenDetails={(c) => {
+                setDrawerCustomer(c as any);
+                setDrawerOpen(true);
+              }}
+            />
+          )}
+          {mode === "agent" && view === "leads" && (
+            <AgentLeadsView
+              customers={customers}
+              currentUserId={me.data?.id ?? ""}
               onOpenDetails={(c) => {
                 setDrawerCustomer(c as any);
                 setDrawerOpen(true);
@@ -916,7 +923,7 @@ function LeadForm({
             className="mt-1 h-10 w-full border border-input bg-background px-3 text-sm"
           >
             <option value="">Select package</option>
-            {packages.map((p) => (
+            {PRODUCT_PACKAGES.map((p) => (
               <option key={p}>{p}</option>
             ))}
           </select>
@@ -1025,13 +1032,14 @@ function OutcomeDialog({
         if (!open) onClose();
       }}
     >
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Log Call Outcome</DialogTitle>
           <DialogDescription>
             {customer?.full_name} · {customer?.cell_number}
           </DialogDescription>
         </DialogHeader>
+        {customer && <OutcomeCustomerDetails key={customer.id} customer={customer} />}
         <form onSubmit={submit} className="space-y-4">
           <div>
             <Label htmlFor="outcome">Outcome</Label>

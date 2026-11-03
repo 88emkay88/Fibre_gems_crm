@@ -23,6 +23,8 @@ export type Customer = {
   payment_type?: string | null;
   status: CustomerStatus | string;
   owner_id: string;
+  original_agent_id?: string | null;
+  created_by?: string | null;
   next_action?: string | null;
   next_action_date?: string | null;
   last_contact_date?: string | null;
@@ -51,6 +53,13 @@ export type ActivityRow = {
   recording_url?: string | null;
   created_at: string;
 };
+
+export const PRODUCT_PACKAGES = [
+  "Vuma Reach 10Mbps/10Mbps",
+  "Vuma Reach 20Mbps/10Mbps",
+  "Vuma Reach 50Mbps/25Mbps",
+  "Vuma Reach 100Mbps/50Mbps",
+] as const;
 
 export type AgentTelephonyState = {
   agentStatus: "ready" | "paused" | "in_call" | "dialing";

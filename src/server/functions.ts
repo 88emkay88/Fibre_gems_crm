@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getCurrentUser, createSession, destroySession, hashPassword, verifyPassword, type AuthUser } from "./auth";
 import { getDb, isMockMode, mockStore, type MockCustomer, type MockActivity, type MockOrder, type MockBatch } from "./db";
 import { customers, orders, payments, activations, activities, profiles, userRoles, agilityImportBatches, agilityImportRows, callEvents } from "./db/schema";
+import { PRODUCT_PACKAGES } from "../components/telephony/types";
 import { fetchAgentStatus, dialNumber, hangUpCall, setHold, setMute, transferCall, postDisposition, remiApiUrl } from "./vicidial.server";
 import { eq, desc, and } from "drizzle-orm";
 import crypto from "node:crypto";
@@ -263,6 +264,12 @@ export const getWorkspaceDataFn = createServerFn({ method: "GET" })
         next_action: customers.nextAction,
         next_action_date: customers.nextActionDate,
         last_contact_date: customers.lastContactDate,
+        product_package: customers.productPackage,
+        status: customers.status,
+        area_suburb: customers.areaSuburb,
+        payment_type: customers.paymentType,
+        original_agent_id: customers.originalAgentId,
+        created_by: customers.createdBy,
         created_at: customers.createdAt,
       })
       .from(customers)
@@ -570,6 +577,105 @@ export const logOutcomeFn = createServerFn({ method: "POST" })
 // ----------------------------------------------------
 // AGILITY SYNC SERVER FUNCTIONS
 // ----------------------------------------------------
+
+export const updateCustomerFn = createServerFn({ method: "POST" })
+  .validator(
+    (data: {
+      customerId: string;
+      first_name: string;
+      surname: string;
+      alternate_cell_number?: string | null;
+      email?: string | null;
+      full_address?: string | null;
+      area_suburb?: string | null;
+      product_package?: string | null;
+      payment_type?: string | null;
+    }) => data
+  )
+  .handler(async ({ data }) => {
+    const user = await getCurrentUser();
+    if (!user) throw new Error("Unauthorized");
+
+    const firstName = data.first_name.trim();
+    const surname = data.surname.trim();
+    if (!firstName || !surname) throw new Error("First name and surname are required");
+
+    const email = data.email?.trim() || null;
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      throw new Error("Enter a valid email address");
+    }
+
+    const pkg = data.product_package || null;
+    if (pkg && !(PRODUCT_PACKAGES as readonly string[]).includes(pkg)) {
+      throw new Error("Choose a package from the list");
+    }
+
+    const patch = {
+      firstName,
+      surname,
+      fullName: `${firstName} ${surname}`,
+      alternateCellNumber: data.alternate_cell_number?.trim() || null,
+      email,
+      fullAddress: data.full_address?.trim() || null,
+      areaSuburb: data.area_suburb?.trim() || null,
+      productPackage: pkg,
+      paymentType: data.payment_type || null,
+    };
+    const nowIso = new Date().toISOString();
+
+    if (isMockMode()) {
+      const existing = mockStore.customers.get(data.customerId);
+      if (!existing || (existing.ownerId !== user.id && user.role !== "admin")) {
+        throw new Error("Customer not found");
+      }
+      mockStore.customers.set(data.customerId, { ...existing, ...patch, updatedAt: nowIso });
+      const actId = crypto.randomUUID();
+      mockStore.activities.set(actId, {
+        id: actId,
+        customerId: data.customerId,
+        actorId: user.id,
+        actionType: "Details updated",
+        contactMethod: null,
+        outcome: "Details Updated",
+        customerStatusAfter: existing.status,
+        nextAction: existing.nextAction,
+        nextActionDate: existing.nextActionDate,
+        escalationType: null,
+        escalationReason: null,
+        notes: "Customer details edited in call outcome",
+        createdAt: nowIso,
+      });
+      return { success: true };
+    }
+
+    const db = getDb();
+    const [existing] = await db
+      .select({ ownerId: customers.ownerId, status: customers.status, nextAction: customers.nextAction, nextActionDate: customers.nextActionDate })
+      .from(customers)
+      .where(eq(customers.id, data.customerId))
+      .limit(1);
+    if (!existing || (existing.ownerId !== user.id && user.role !== "admin")) {
+      throw new Error("Customer not found");
+    }
+
+    await db
+      .update(customers)
+      .set({ ...patch, updatedAt: new Date() })
+      .where(eq(customers.id, data.customerId));
+
+    await db.insert(activities).values({
+      customerId: data.customerId,
+      actorId: user.id,
+      actionType: "Details updated",
+      outcome: "Details Updated",
+      customerStatusAfter: existing.status,
+      nextAction: existing.nextAction,
+      nextActionDate: existing.nextActionDate,
+      notes: "Customer details edited in call outcome",
+    });
+
+    return { success: true };
+  });
 
 export const getAgilityBatchesFn = createServerFn({ method: "GET" }).handler(async () => {
   const user = await getCurrentUser();
