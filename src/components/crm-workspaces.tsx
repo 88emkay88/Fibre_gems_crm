@@ -25,15 +25,30 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getCurrentUserFn, logoutFn, getWorkspaceDataFn, captureLeadFn, logOutcomeFn } from "@/server/functions";
+import {
+  getCurrentUserFn,
+  logoutFn,
+  getWorkspaceDataFn,
+  captureLeadFn,
+  logOutcomeFn,
+} from "@/server/functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { AgilitySync } from "@/components/agility-sync";
 import { TopMetricsBar } from "./telephony/TopMetricsBar";
 import { PipelineBoard } from "./telephony/PipelineBoard";
 import { LeadQueue } from "./telephony/LeadQueue";
+import { buildCallQueue } from "./telephony/call-queue";
+import { CallbackQueueView } from "./agent-callbacks";
 import { CustomerDrawer } from "./telephony/CustomerDrawer";
 import { SoftphoneBar } from "./telephony/SoftphoneBar";
 import { dialCustomerApi, updateStageApi } from "./telephony/telephony-service";
@@ -129,20 +144,26 @@ const tone = (status: string) =>
   status === "activated"
     ? "text-success bg-success/10"
     : status === "lost"
-    ? "text-destructive bg-destructive/10"
-    : status.includes("pending")
-    ? "text-secondary bg-secondary/10"
-    : "text-primary bg-primary/10";
+      ? "text-destructive bg-destructive/10"
+      : status.includes("pending")
+        ? "text-secondary bg-secondary/10"
+        : "text-primary bg-primary/10";
 
 function Badge({ text, status }: { text: string; status?: string }) {
   return (
-    <span className={`inline-flex items-center rounded px-2.5 py-1 text-xs font-semibold ${tone(status ?? "new_lead")}`}>
+    <span
+      className={`inline-flex items-center rounded px-2.5 py-1 text-xs font-semibold ${tone(status ?? "new_lead")}`}
+    >
       {text}
     </span>
   );
 }
 
-function Field({ label, name, ...props }: { label: string; name: string } & React.InputHTMLAttributes<HTMLInputElement>) {
+function Field({
+  label,
+  name,
+  ...props
+}: { label: string; name: string } & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <div className="space-y-1.5">
       <Label htmlFor={name} className="text-xs font-semibold uppercase text-muted-foreground">
@@ -154,7 +175,11 @@ function Field({ label, name, ...props }: { label: string; name: string } & Reac
 }
 
 function Empty({ title }: { title: string }) {
-  return <div className="border border-dashed border-border py-16 text-center text-sm text-muted-foreground">{title}</div>;
+  return (
+    <div className="border border-dashed border-border py-16 text-center text-sm text-muted-foreground">
+      {title}
+    </div>
+  );
 }
 
 export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
@@ -193,7 +218,7 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
     await dialCustomerApi(
       customer.id,
       customer.cell_number,
-      customer.full_name || `${customer.first_name} ${customer.surname}`
+      customer.full_name || `${customer.first_name} ${customer.surname}`,
     );
   };
 
@@ -203,7 +228,7 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
       return {
         ...old,
         customers: old.customers.map((c: any) =>
-          c.id === customerId ? { ...c, status: targetStatus } : c
+          c.id === customerId ? { ...c, status: targetStatus } : c,
         ),
       };
     });
@@ -233,10 +258,7 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
   const today = jhbDate();
   const name = me.data?.fullName ?? "FibreGems user";
 
-  const due = useMemo(
-    () => customers.filter((c) => c.next_action_date && c.next_action_date <= today && c.status !== "lost"),
-    [customers, today]
-  );
+  const queue = useMemo(() => buildCallQueue(customers, today), [customers, today]);
 
   const completed = useMemo(
     () =>
@@ -251,12 +273,15 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
                 year: "numeric",
                 month: "2-digit",
                 day: "2-digit",
-              }).format(new Date(a.created_at)) === today
+              }).format(new Date(a.created_at)) === today,
           )
-          .map((a) => a.customer_id)
+          .map((a) => a.customer_id),
       ),
-    [activities, me.data?.id, today]
+    [activities, me.data?.id, today],
   );
+
+  const queueRemaining = queue.filter((item) => !completed.has(item.customer.id)).length;
+  const queueScheduled = queueRemaining + completed.size;
 
   const navigation =
     mode === "agent"
@@ -277,16 +302,18 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
 
   const heading =
     mode === "admin"
-      ? ({
-          dashboard: "Command Centre",
-          callbacks: "Call Back Accountability",
-          grid: "Master Lead & Order Grid",
-          sync: "Agility Sync",
-          agents: "Manage Agents",
-        } as Record<string, string>)[view]
+      ? (
+          {
+            dashboard: "Command Centre",
+            callbacks: "Call Back Accountability",
+            grid: "Master Lead & Order Grid",
+            sync: "Agility Sync",
+            agents: "Manage Agents",
+          } as Record<string, string>
+        )[view]
       : view === "kanban"
-      ? "Pipeline"
-      : "Daily Execution Command";
+        ? "Pipeline"
+        : "Daily Execution Command";
 
   async function logout() {
     await logoutFn();
@@ -344,7 +371,9 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
           </div>
         </div>
         <nav className="flex-1 space-y-1 p-3">
-          <p className="px-3 py-3 text-xs font-semibold uppercase text-muted-foreground">Workspace</p>
+          <p className="px-3 py-3 text-xs font-semibold uppercase text-muted-foreground">
+            Workspace
+          </p>
           {navigation.map((item) => (
             <Button
               key={item.id}
@@ -357,8 +386,10 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
             >
               {<item.icon />}
               <span className="flex-1 text-left">{item.label}</span>
-              {item.id === "callbacks" && due.length > 0 && (
-                <span className="rounded bg-destructive/15 px-1.5 text-xs text-destructive">{due.length}</span>
+              {item.id === "callbacks" && queueRemaining > 0 && (
+                <span className="rounded bg-destructive/15 px-1.5 text-xs text-destructive">
+                  {queueRemaining}
+                </span>
               )}
             </Button>
           ))}
@@ -389,7 +420,13 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="icon" title="Refresh" aria-label="Refresh" onClick={refresh}>
+            <Button
+              variant="outline"
+              size="icon"
+              title="Refresh"
+              aria-label="Refresh"
+              onClick={refresh}
+            >
               <RefreshCw />
             </Button>
             {mode === "agent" && (
@@ -403,21 +440,26 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
         <div className="mx-auto max-w-[1600px] space-y-7 p-4 md:p-8">
           {workspaceQ.isError ? (
             <div className="border border-destructive p-4 text-destructive">
-              Unable to load CRM data. <Button variant="link" onClick={refresh}>Retry</Button>
+              Unable to load CRM data.{" "}
+              <Button variant="link" onClick={refresh}>
+                Retry
+              </Button>
             </div>
           ) : null}
 
           {mode === "agent" && view === "kanban" && (
             <div className="space-y-6">
               <TopMetricsBar
-                scheduledToday={due.length}
+                scheduledToday={queueScheduled}
                 completedToday={completed.size}
-                remainingCalls={customers.filter((c) => c.status !== "activated" && c.status !== "lost").length}
-                totalTouches={activities.filter((a) => a.actor_id === me.data?.id && a.created_at?.slice(0, 10) === today).length}
+                remainingCalls={queueRemaining}
+                totalTouches={
+                  activities.filter(
+                    (a) => a.actor_id === me.data?.id && a.created_at?.slice(0, 10) === today,
+                  ).length
+                }
                 completionRate={
-                  due.length + completed.size > 0
-                    ? Math.round((completed.size / (due.length + completed.size)) * 100)
-                    : 0
+                  queueScheduled > 0 ? Math.round((completed.size / queueScheduled) * 100) : 0
                 }
                 onRefresh={refresh}
                 onQuickLead={() => setLeadOpen(true)}
@@ -426,7 +468,7 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
 
               <div className="grid gap-4 lg:grid-cols-4">
                 <LeadQueue
-                  customers={customers as any}
+                  items={queue}
                   today={today}
                   activeDialingId={telephonyState.activeCustomerId}
                   onSelectCustomer={(c) => {
@@ -453,18 +495,22 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
 
           {mode === "agent" && view !== "kanban" && (
             <AgentStats
-              customers={customers}
-              activities={activities}
-              due={due}
-              completed={completed}
-              me={me.data?.id}
-              today={today}
+              scheduled={queueScheduled}
+              done={completed.size}
+              remaining={queueRemaining}
+              touches={
+                activities.filter(
+                  (a) => a.actor_id === me.data?.id && a.created_at?.slice(0, 10) === today,
+                ).length
+              }
             />
           )}
           {mode === "agent" && view === "callbacks" && (
-            <Callbacks customers={due} completed={completed} today={today} onSelect={setSelected} />
+            <CallbackQueueView items={queue} today={today} onSelect={setSelected} />
           )}
-          {mode === "agent" && view === "worklist" && <Worklist customers={customers} onSelect={setSelected} />}
+          {mode === "agent" && view === "worklist" && (
+            <Worklist customers={customers} onSelect={setSelected} />
+          )}
           {mode === "agent" && view === "newlead" && (
             <LeadForm
               onDone={() => {
@@ -494,14 +540,26 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
             />
           )}
           {mode === "admin" && view === "callbacks" && (
-            <Accountability customers={customers} activities={activities} profiles={profiles} onSelect={setSelected} />
+            <Accountability
+              customers={customers}
+              activities={activities}
+              profiles={profiles}
+              onSelect={setSelected}
+            />
           )}
-          {mode === "admin" && view === "grid" && <Worklist customers={customers} onSelect={setSelected} admin />}
+          {mode === "admin" && view === "grid" && (
+            <Worklist customers={customers} onSelect={setSelected} admin />
+          )}
           {mode === "admin" && view === "sync" && <AgilitySync />}
           {mode === "admin" && view === "agents" && <Agents profiles={profiles} />}
         </div>
       </main>
-      <OutcomeDialog customer={selected} today={today} onClose={() => setSelected(null)} onSaved={refresh} />
+      <OutcomeDialog
+        customer={selected}
+        today={today}
+        onClose={() => setSelected(null)}
+        onSaved={refresh}
+      />
       {leadOpen && (
         <Dialog open onOpenChange={setLeadOpen}>
           <DialogContent>
@@ -541,33 +599,29 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
 }
 
 function AgentStats({
-  customers,
-  activities,
-  due,
-  completed,
-  me,
-  today,
+  scheduled,
+  done,
+  remaining,
+  touches,
 }: {
-  customers: Customer[];
-  activities: ActivityRow[];
-  due: Customer[];
-  completed: Set<string>;
-  me: string | undefined;
-  today: string;
+  scheduled: number;
+  done: number;
+  remaining: number;
+  touches: number;
 }) {
-  const done = due.filter((c) => completed.has(c.id)).length;
-  const touches = activities.filter((a) => a.actor_id === me && a.created_at.slice(0, 10) === today).length;
   return (
     <section>
       <div className="mb-5">
         <h2 className="text-lg font-semibold">Today’s execution</h2>
-        <p className="text-sm text-muted-foreground">Your assigned leads and scheduled follow-ups.</p>
+        <p className="text-sm text-muted-foreground">
+          Your assigned leads and scheduled follow-ups.
+        </p>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {[
-          ["Scheduled Today", due.length, CalendarDays],
+          ["Scheduled Today", scheduled, CalendarDays],
           ["Completed Today", done, Check],
-          ["Remaining Calls", Math.max(0, due.length - done), Clock3],
+          ["Remaining Calls", remaining, Clock3],
           ["Total Touches Logged", touches, Activity],
         ].map(([label, value, Icon]) => {
           const IconComponent = Icon as typeof CalendarDays;
@@ -590,114 +644,10 @@ function AgentStats({
         <div className="h-1.5 flex-1 bg-muted">
           <div
             className="h-full bg-primary transition-all duration-500"
-            style={{ width: `${due.length ? (done / due.length) * 100 : 0}%` }}
+            style={{ width: `${scheduled ? (done / scheduled) * 100 : 0}%` }}
           />
         </div>
-        <span>{due.length ? Math.round((done / due.length) * 100) : 0}%</span>
-      </div>
-      <span className="sr-only">{customers.length} assigned customers</span>
-    </section>
-  );
-}
-
-function Callbacks({
-  customers,
-  completed,
-  today,
-  onSelect,
-}: {
-  customers: Customer[];
-  completed: Set<string>;
-  today: string;
-  onSelect: (c: Customer) => void;
-}) {
-  const [filter, setFilter] = useState("all");
-  const shown = customers.filter((c) =>
-    filter === "all" ? true : filter === "done" ? completed.has(c.id) : !completed.has(c.id)
-  );
-  return (
-    <section>
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-xl font-bold">Today’s Call Backs</h2>
-          <p className="text-sm text-muted-foreground">Due and overdue calls</p>
-        </div>
-        <div className="flex gap-1 border border-border p-1">
-          {[
-            ["all", "All"],
-            ["pending", "Pending"],
-            ["done", "Done Today"],
-          ].map(([id, label]) => (
-            <Button
-              key={id}
-              size="sm"
-              variant={filter === id ? "default" : "ghost"}
-              onClick={() => setFilter(id ?? "all")}
-            >
-              {label} ({id === "all" ? customers.length : customers.filter((c) => completed.has(c.id) === (id === "done")).length})
-            </Button>
-          ))}
-        </div>
-      </div>
-      <div className="grid gap-3 xl:grid-cols-2">
-        {shown.map((c) => (
-          <div
-            key={c.id}
-            className={`border bg-card p-5 ${
-              completed.has(c.id)
-                ? "border-success/50"
-                : (c.next_action_date ?? "") < today
-                ? "border-secondary/50"
-                : "border-border"
-            }`}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="grid size-10 shrink-0 place-items-center rounded-full bg-primary/15 font-bold text-primary">
-                  {c.full_name.slice(0, 1)}
-                </div>
-                <div>
-                  <h3 className="font-semibold">{c.full_name}</h3>
-                  <p className="text-sm text-muted-foreground">{c.cell_number}</p>
-                </div>
-              </div>
-              <Badge text={statusNames[c.status] ?? c.status} status={c.status} />
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {completed.has(c.id) ? (
-                <Badge text="✓ Done Today" status="activated" />
-              ) : (c.next_action_date ?? "") < today ? (
-                <Badge text="⚠ Overdue" status="payment_pending" />
-              ) : null}
-              {c.status === "payment_pending" && <Badge text="Payment follow-up" status="payment_pending" />}
-            </div>
-            <div className="mt-4 space-y-1 text-sm text-muted-foreground">
-              <p>{c.product_package ?? "Package not set"}</p>
-              <p>
-                {c.next_action ?? "Customer Callback"} · {dateText(c.next_action_date)}
-              </p>
-            </div>
-            <div className="mt-5 flex gap-2 border-t border-border pt-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  void navigator.clipboard.writeText(c.cell_number).then(() => toast.success("Number copied"));
-                }}
-              >
-                <Copy /> Copy number
-              </Button>
-              <Button size="sm" onClick={() => onSelect(c)}>
-                <Phone /> Log outcome
-              </Button>
-            </div>
-          </div>
-        ))}
-        {!shown.length && (
-          <div className="xl:col-span-2">
-            <Empty title="No callbacks in this view" />
-          </div>
-        )}
+        <span>{scheduled ? Math.round((done / scheduled) * 100) : 0}%</span>
       </div>
     </section>
   );
@@ -715,7 +665,9 @@ function Worklist({
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(0);
   const rows = customers.filter((c) =>
-    `${c.full_name} ${c.cell_number} ${c.area_suburb ?? ""}`.toLowerCase().includes(query.toLowerCase())
+    `${c.full_name} ${c.cell_number} ${c.area_suburb ?? ""}`
+      .toLowerCase()
+      .includes(query.toLowerCase()),
   );
   const size = admin ? 50 : 20;
   const pages = Math.max(1, Math.ceil(rows.length / size));
@@ -745,11 +697,13 @@ function Worklist({
         <table className="w-full min-w-[760px] text-left text-sm">
           <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
             <tr>
-              {["Customer", "Phone", "Package", "Status", "Scheduled callback", "Action"].map((h) => (
-                <th key={h} className="px-4 py-3">
-                  {h}
-                </th>
-              ))}
+              {["Customer", "Phone", "Package", "Status", "Scheduled callback", "Action"].map(
+                (h) => (
+                  <th key={h} className="px-4 py-3">
+                    {h}
+                  </th>
+                ),
+              )}
             </tr>
           </thead>
           <tbody>
@@ -777,13 +731,25 @@ function Worklist({
         {!rows.length && <Empty title="No matching customers" />}
       </div>
       <div className="mt-4 flex items-center justify-end gap-3">
-        <Button variant="outline" size="icon" aria-label="Previous page" disabled={current === 0} onClick={() => setPage(current - 1)}>
+        <Button
+          variant="outline"
+          size="icon"
+          aria-label="Previous page"
+          disabled={current === 0}
+          onClick={() => setPage(current - 1)}
+        >
           <ChevronLeft />
         </Button>
         <span className="text-sm text-muted-foreground">
           Page {current + 1} of {pages}
         </span>
-        <Button variant="outline" size="icon" aria-label="Next page" disabled={current >= pages - 1} onClick={() => setPage(current + 1)}>
+        <Button
+          variant="outline"
+          size="icon"
+          aria-label="Next page"
+          disabled={current >= pages - 1}
+          onClick={() => setPage(current + 1)}
+        >
           <ChevronRight />
         </Button>
       </div>
@@ -791,13 +757,19 @@ function Worklist({
   );
 }
 
-function ActivityLog({ activities, customers }: { activities: ActivityRow[]; customers: Customer[] }) {
+function ActivityLog({
+  activities,
+  customers,
+}: {
+  activities: ActivityRow[];
+  customers: Customer[];
+}) {
   const [query, setQuery] = useState("");
   const names = new Map(customers.map((c) => [c.id, c.full_name]));
   const shown = activities.filter((a) =>
     `${names.get(a.customer_id) ?? ""} ${a.outcome ?? a.action_type} ${a.notes ?? ""}`
       .toLowerCase()
-      .includes(query.toLowerCase())
+      .includes(query.toLowerCase()),
   );
   return (
     <section>
@@ -829,12 +801,18 @@ function ActivityLog({ activities, customers }: { activities: ActivityRow[]; cus
             {shown.slice(0, 100).map((a) => (
               <tr className="border-t border-border" key={a.id}>
                 <td className="px-4 py-4">
-                  {new Date(a.created_at).toLocaleString("en-ZA", { timeZone: "Africa/Johannesburg" })}
+                  {new Date(a.created_at).toLocaleString("en-ZA", {
+                    timeZone: "Africa/Johannesburg",
+                  })}
                 </td>
-                <td className="px-4 py-4 font-semibold">{names.get(a.customer_id) ?? "Customer"}</td>
+                <td className="px-4 py-4 font-semibold">
+                  {names.get(a.customer_id) ?? "Customer"}
+                </td>
                 <td className="px-4 py-4">{a.outcome ?? a.action_type}</td>
                 <td className="px-4 py-4">{statusNames[a.customer_status_after ?? ""] ?? "—"}</td>
-                <td className="max-w-xs truncate px-4 py-4 text-muted-foreground">{a.notes ?? "—"}</td>
+                <td className="max-w-xs truncate px-4 py-4 text-muted-foreground">
+                  {a.notes ?? "—"}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -907,7 +885,11 @@ function LeadForm({
         <Field label="Full address" name="full_address" />
         <div>
           <Label htmlFor="product_package">Product package</Label>
-          <select id="product_package" name="product_package" className="mt-1 h-10 w-full border border-input bg-background px-3 text-sm">
+          <select
+            id="product_package"
+            name="product_package"
+            className="mt-1 h-10 w-full border border-input bg-background px-3 text-sm"
+          >
             <option value="">Select package</option>
             {packages.map((p) => (
               <option key={p}>{p}</option>
@@ -916,7 +898,11 @@ function LeadForm({
         </div>
         <div>
           <Label htmlFor="payment_type">Payment type</Label>
-          <select id="payment_type" name="payment_type" className="mt-1 h-10 w-full border border-input bg-background px-3 text-sm">
+          <select
+            id="payment_type"
+            name="payment_type"
+            className="mt-1 h-10 w-full border border-input bg-background px-3 text-sm"
+          >
             <option value="">Select payment type</option>
             <option>Prepaid</option>
             <option>Debit Order</option>
@@ -924,7 +910,13 @@ function LeadForm({
           </select>
         </div>
         <Field label="Next action" name="next_action" />
-        <Field label="Action date" name="next_action_date" type="date" min={today} max={dateAdd(today, 8)} />
+        <Field
+          label="Action date"
+          name="next_action_date"
+          type="date"
+          min={today}
+          max={dateAdd(today, 8)}
+        />
       </div>
       <Button type="submit" disabled={busy}>
         {busy ? "Saving…" : "Capture lead"}
@@ -952,15 +944,26 @@ function OutcomeDialog({
     setBusy(true);
     const v = new FormData(e.currentTarget);
     const outcome = String(v.get("outcome"));
+    if (outcome === "Reschedule Call" && !v.get("next_action_date")) {
+      toast.error("Pick a callback date");
+      setBusy(false);
+      return;
+    }
     const status =
-      ({
-        "Sale Won": "payment_pending",
-        Activated: "activated",
-        "Not Interested": "lost",
-        "Payment Received": "activation_pending",
-      } as Record<string, string>)[outcome] ?? customer.status;
+      (
+        {
+          "Sale Won": "payment_pending",
+          Activated: "activated",
+          "Not Interested": "lost",
+          "Payment Received": "activation_pending",
+        } as Record<string, string>
+      )[outcome] ?? customer.status;
 
-    const nextDate = outcome === "Activated" ? dateAdd(today, 7) : String(v.get("next_action_date") || "") || null;
+    const nextDate =
+      outcome === "Activated"
+        ? dateAdd(today, 7)
+        : String(v.get("next_action_date") || "") ||
+          (outcome === "Not Interested" ? null : dateAdd(today, 1));
 
     try {
       await logOutcomeFn({
@@ -973,8 +976,8 @@ function OutcomeDialog({
             outcome === "Activated"
               ? "After-Sales Call"
               : outcome === "Not Interested"
-              ? "No Further Action"
-              : "Customer Callback",
+                ? "No Further Action"
+                : "Customer Callback",
           notes: String(v.get("notes") || "") || null,
         },
       });
@@ -1005,7 +1008,11 @@ function OutcomeDialog({
         <form onSubmit={submit} className="space-y-4">
           <div>
             <Label htmlFor="outcome">Outcome</Label>
-            <select id="outcome" name="outcome" className="mt-1 h-10 w-full border border-input bg-background px-3">
+            <select
+              id="outcome"
+              name="outcome"
+              className="mt-1 h-10 w-full border border-input bg-background px-3"
+            >
               <option>No Answer</option>
               <option>Reschedule Call</option>
               <option>Sale Won</option>
@@ -1014,10 +1021,20 @@ function OutcomeDialog({
               <option>Not Interested</option>
             </select>
           </div>
-          <Field label="Next callback date" name="next_action_date" type="date" min={today} max={dateAdd(today, 8)} />
+          <Field
+            label="Next callback date"
+            name="next_action_date"
+            type="date"
+            min={today}
+            max={dateAdd(today, 8)}
+          />
           <div>
             <Label htmlFor="outcome_notes">Notes</Label>
-            <textarea id="outcome_notes" name="notes" className="mt-1 min-h-24 w-full border border-input bg-background p-3" />
+            <textarea
+              id="outcome_notes"
+              name="notes"
+              className="mt-1 min-h-24 w-full border border-input bg-background p-3"
+            />
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
@@ -1119,7 +1136,8 @@ function Accountability({
   const scheduled = customers.filter((c) => c.next_action_date === day);
   const done = (c: Customer) =>
     activities.some(
-      (a) => a.customer_id === c.id && a.actor_id === c.owner_id && a.created_at.slice(0, 10) === day
+      (a) =>
+        a.customer_id === c.id && a.actor_id === c.owner_id && a.created_at.slice(0, 10) === day,
     );
   const missed = scheduled.filter((c) => day < jhbDate() && !done(c));
   return (
@@ -1131,7 +1149,13 @@ function Accountability({
         <Button variant="outline" onClick={() => setDay(dateAdd(jhbDate(), -1))}>
           Yesterday
         </Button>
-        <Input aria-label="Report date" type="date" value={day} onChange={(e) => setDay(e.target.value)} className="w-auto" />
+        <Input
+          aria-label="Report date"
+          type="date"
+          value={day}
+          onChange={(e) => setDay(e.target.value)}
+          className="w-auto"
+        />
       </div>
       {missed.length > 0 && (
         <div className="mb-4 border border-destructive p-4 text-destructive">
@@ -1173,7 +1197,9 @@ function Accountability({
                   <td className="p-3">{list.length}</td>
                   <td className="p-3">{count}</td>
                   <td className="p-3">{day < jhbDate() ? list.length - count : 0}</td>
-                  <td className="p-3">{list.length ? Math.round((count / list.length) * 100) : 0}%</td>
+                  <td className="p-3">
+                    {list.length ? Math.round((count / list.length) * 100) : 0}%
+                  </td>
                 </tr>
               );
             })}

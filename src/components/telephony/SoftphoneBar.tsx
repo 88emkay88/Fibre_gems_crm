@@ -3,7 +3,12 @@ import { PhoneOff, Mic, MicOff, Pause, Play, Check, ChevronDown } from "lucide-r
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import type { AgentTelephonyState } from "./types";
-import { hangupCallApi, setAgentStatusApi, submitDispositionApi } from "./telephony-service";
+import {
+  hangupCallApi,
+  setAgentStatusApi,
+  submitDispositionApi,
+  tomorrowInJohannesburg,
+} from "./telephony-service";
 
 const PAUSE_CODES = ["LUNCH", "TEA", "MEETING", "TRAINING", "WRAPUP"];
 const DISPOSITIONS = [
@@ -34,6 +39,7 @@ export function SoftphoneBar({
   onDispositionComplete,
 }: SoftphoneBarProps) {
   const [selectedDispo, setSelectedDispo] = useState("SALE");
+  const [callbackDate, setCallbackDate] = useState(tomorrowInJohannesburg);
   const [pauseMenuOpen, setPauseMenuOpen] = useState(false);
 
   const isCallActive =
@@ -72,11 +78,16 @@ export function SoftphoneBar({
       toast.error("No active customer for this outcome");
       return;
     }
+    if (selectedDispo === "CALLBACK" && !callbackDate) {
+      toast.error("Pick a callback date");
+      return;
+    }
 
     await submitDispositionApi({
       customerId: telephonyState.activeCustomerId,
       disposition: selectedDispo,
       notes: `Softphone outcome: ${selectedDispo}`,
+      callbackDate: selectedDispo === "CALLBACK" ? callbackDate : null,
     });
 
     setTelephonyState((prev) => ({
@@ -228,6 +239,17 @@ export function SoftphoneBar({
                 </option>
               ))}
             </select>
+            {selectedDispo === "CALLBACK" && (
+              <input
+                type="date"
+                value={callbackDate}
+                min={tomorrowInJohannesburg()}
+                onChange={(e) => setCallbackDate(e.target.value)}
+                aria-label="Callback date"
+                required
+                className="h-10 rounded-full border border-input bg-card px-3 text-sm text-foreground"
+              />
+            )}
             <Button
               onClick={handleSaveDisposition}
               disabled={!telephonyState.activeCustomerId}
