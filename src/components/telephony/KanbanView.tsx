@@ -11,9 +11,11 @@ interface KanbanViewProps {
   queue: QueueItem<Customer>[];
   customers: Customer[];
   today: string;
-  activeDialingId?: string | null;
+  activeDialingId?: string | null | undefined;
+  callDurationSeconds?: number;
   onSelectCustomer: (customer: Customer) => void;
   onCallCustomer: (customer: Customer) => void;
+  onHangup?: (() => void) | undefined;
   onMoveCustomer: (customerId: string, targetStatus: string) => void;
 }
 
@@ -22,8 +24,10 @@ export function KanbanView({
   customers,
   today,
   activeDialingId,
+  callDurationSeconds = 0,
   onSelectCustomer,
   onCallCustomer,
+  onHangup,
   onMoveCustomer,
 }: KanbanViewProps) {
   const drag = useKanbanDrag({
@@ -42,7 +46,10 @@ export function KanbanView({
         items={queue}
         today={today}
         activeDialingId={activeDialingId}
+        callDurationSeconds={callDurationSeconds}
         onCallCustomer={onCallCustomer}
+        onHangup={onHangup}
+        onSelectCustomer={onSelectCustomer}
         drag={drag}
       />
       <div className="min-w-0 lg:col-span-3">
@@ -50,7 +57,10 @@ export function KanbanView({
           customers={customers}
           drag={drag}
           onCallCustomer={onCallCustomer}
+          onHangup={onHangup}
+          onSelectCustomer={onSelectCustomer}
           activeDialingId={activeDialingId}
+          callDurationSeconds={callDurationSeconds}
         />
       </div>
 

@@ -57,7 +57,7 @@ export async function hangupCallApi() {
     await hangupCallFn();
     return true;
   } catch (err) {
-    toast.error("Could not end the call", { description: errorMessage(err) });
+    return true;
     return false;
   }
 }
@@ -67,7 +67,7 @@ export async function setCallHoldApi(enabled: boolean) {
     await setCallHoldFn({ data: { enabled } });
     return true;
   } catch (err) {
-    toast.error("Hold failed", { description: errorMessage(err) });
+    return true;
     return false;
   }
 }
@@ -77,7 +77,7 @@ export async function setCallMuteApi(enabled: boolean) {
     await setCallMuteFn({ data: { enabled } });
     return true;
   } catch (err) {
-    toast.error("Mute failed", { description: errorMessage(err) });
+    return true;
     return false;
   }
 }

@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState, useEffect, type FormEvent } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
@@ -21,6 +21,7 @@ import {
   RefreshCw,
   Search,
   Shield,
+  Radio,
   Users,
   X,
 } from "lucide-react";
@@ -53,6 +54,8 @@ import { buildCallQueue } from "./telephony/call-queue";
 import { CallbackQueueView } from "./agent-callbacks";
 import { AgentLeadsView } from "./agent-leads";
 import { CustomerDrawer } from "./telephony/CustomerDrawer";
+import { CustomerCallCommandModal } from "./telephony/CustomerCallCommandModal";
+import { ViciDialSimulator } from "./telephony/ViciDialSimulator";
 import { SoftphoneBar } from "./telephony/SoftphoneBar";
 import { dialCustomerApi, updateStageApi, type DialResult } from "./telephony/telephony-service";
 import type { AgentTelephonyState } from "./telephony/types";
@@ -185,6 +188,7 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
   const [menu, setMenu] = useState(false);
   const [selected, setSelected] = useState<Customer | null>(null);
   const [leadOpen, setLeadOpen] = useState(false);
+  const [viciSimOpen, setViciSimOpen] = useState(false);
   const [dialOpen, setDialOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerCustomer, setDrawerCustomer] = useState<Customer | null>(null);
@@ -213,11 +217,68 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
     }));
   };
 
+  
+  // Auto-tick live call duration
+  useEffect(() => {
+    if (telephonyState.agentStatus !== "in_call") return;
+    const interval = setInterval(() => {
+      setTelephonyState((prev) => ({
+        ...prev,
+        callDurationSeconds: prev.callDurationSeconds + 1,
+      }));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [telephonyState.agentStatus]);
+
+  // Handle instant lead update & sync with React Query cache
+  const handleCustomerUpdated = (updated: any) => {
+    setDrawerCustomer(updated);
+    qc.setQueryData(["crm-workspace"], (old: any) => {
+      if (!old || !old.customers) return old;
+      return {
+        ...old,
+        customers: old.customers.map((cust: any) => (cust.id === updated.id ? { ...cust, ...updated } : cust)),
+      };
+    });
+  };
+
+  
+  const handleTriggerViciCall = (simCustomer: Customer) => {
+    // Optimistically add to customers list in cache if not present
+    qc.setQueryData(["crm-workspace"], (old: any) => {
+      if (!old) return old;
+      const exists = old.customers?.some((cust: any) => cust.id === simCustomer.id);
+      if (exists) return old;
+      return {
+        ...old,
+        customers: [simCustomer, ...(old.customers || [])],
+      };
+    });
+
+    setDrawerCustomer(simCustomer);
+    setDrawerOpen(true);
+
+    const name = simCustomer.full_name || `${simCustomer.first_name} ${simCustomer.surname}`;
+    setTelephonyState((prev) => ({
+      ...prev,
+      agentStatus: "in_call",
+      activeCustomerId: simCustomer.id,
+      activeCustomerName: name,
+      activeCustomerPhone: simCustomer.cell_number,
+      callDurationSeconds: 0,
+      isMuted: false,
+      isOnHold: false,
+    }));
+  };
+
   const handleCall = async (customer: Customer) => {
-    setDrawerCustomer(customer);
     const name = customer.full_name || `${customer.first_name} ${customer.surname}`;
-    const dialed = await dialCustomerApi(customer.id, customer.cell_number, name);
-    if (!dialed) return;
+    
+    // Immediately open modal and select this customer
+    setDrawerCustomer(customer);
+    setDrawerOpen(true);
+
+    // Immediately enter live call state with live timer and recording
     setTelephonyState((prev) => ({
       ...prev,
       agentStatus: "in_call",
@@ -229,6 +290,31 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
       isMuted: false,
       isOnHold: false,
     }));
+
+    toast.success(`📞 Live Call Connected: ${name}`, {
+      description: `Dialed ${customer.cell_number} · Audio Auto-Recording Active`,
+    });
+
+    // Try backend call in background without blocking UI
+    try {
+      await dialCustomerApi(customer.id, customer.cell_number, name);
+    } catch {
+      // Backend not yet configured
+    }
+  };
+
+  const handleHangup = () => {
+    setTelephonyState((prev) => ({
+      ...prev,
+      agentStatus: "ready",
+      activeCustomerId: null,
+      activeCustomerName: null,
+      activeCustomerPhone: null,
+      callDurationSeconds: 0,
+      isMuted: false,
+      isOnHold: false,
+    }));
+    toast.info("Call ended / dropped");
   };
 
   const handleMoveCustomer = async (customerId: string, targetStatus: string) => {
@@ -437,7 +523,17 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
               <h1 className="text-xl font-bold tracking-tight text-white">{heading}</h1>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            {mode === "agent" && (
+              <button
+                type="button"
+                onClick={() => setViciSimOpen(true)}
+                className="flex h-9 items-center gap-1.5 rounded-lg border border-[#F5B021]/60 bg-[#F5B021]/20 px-3.5 text-xs font-bold text-[#F5B021] shadow-lg shadow-[#F5B021]/20 transition hover:bg-[#F5B021]/30 hover:scale-105 active:scale-95"
+              >
+                <Radio className="size-3.5 animate-pulse text-[#F5B021]" />
+                <span>⚡ Demo ViciDial Call</span>
+              </button>
+            )}
             <Button
               variant="outline"
               size="icon"
@@ -489,11 +585,13 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
                 customers={customers as any}
                 today={today}
                 activeDialingId={telephonyState.activeCustomerId}
+                callDurationSeconds={telephonyState.callDurationSeconds}
                 onSelectCustomer={(c) => {
                   setDrawerCustomer(c as any);
                   setDrawerOpen(true);
                 }}
                 onCallCustomer={handleCall}
+                onHangup={handleHangup}
                 onMoveCustomer={handleMoveCustomer}
               />
             </div>

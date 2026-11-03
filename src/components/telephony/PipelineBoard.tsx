@@ -7,14 +7,20 @@ interface PipelineBoardProps {
   customers: Customer[];
   drag: KanbanDrag;
   onCallCustomer: (customer: Customer) => void;
-  activeDialingId?: string | null;
+  onHangup?: (() => void) | undefined;
+  onSelectCustomer?: ((customer: Customer) => void) | undefined;
+  activeDialingId?: string | null | undefined;
+  callDurationSeconds?: number | undefined;
 }
 
 export function PipelineBoard({
   customers,
   drag,
   onCallCustomer,
+  onHangup,
+  onSelectCustomer,
   activeDialingId,
+  callDurationSeconds = 0,
 }: PipelineBoardProps) {
   return (
     <div className="flex gap-3 overflow-x-auto pb-4">
@@ -51,8 +57,11 @@ export function PipelineBoard({
                   key={cust.id}
                   customer={cust}
                   onCall={onCallCustomer}
+                  onHangup={onHangup}
+                  onSelect={onSelectCustomer}
                   isDialing={activeDialingId === cust.id}
                   isDragging={drag.draggingId === cust.id}
+                  callDurationSeconds={activeDialingId === cust.id ? callDurationSeconds : 0}
                   onPointerDown={(e) => drag.startDrag(e, cust)}
                 />
               ))}

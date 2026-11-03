@@ -1,4 +1,4 @@
-import { CalendarDays, CheckCircle2, Clock3, Activity, Plus, RefreshCw } from "lucide-react";
+import { CalendarDays, CheckCircle2, Clock3, Activity, Plus, RefreshCw, Radio } from "lucide-react";
 
 interface TopMetricsBarProps {
   scheduledToday: number;
@@ -8,6 +8,7 @@ interface TopMetricsBarProps {
   completionRate: number;
   onRefresh: () => void;
   onQuickLead: () => void;
+  onSimulateViciCall?: () => void;
   isRefreshing?: boolean;
 }
 
@@ -19,6 +20,7 @@ export function TopMetricsBar({
   completionRate,
   onRefresh,
   onQuickLead,
+  onSimulateViciCall,
   isRefreshing = false,
 }: TopMetricsBarProps) {
   const stats = [
@@ -61,6 +63,17 @@ export function TopMetricsBar({
           <span className="text-xs font-semibold uppercase tracking-widest text-white/40">Live Queue</span>
         </div>
         <div className="flex items-center gap-2">
+          {/* Demo ViciDial Trigger Button */}
+          {onSimulateViciCall && (
+            <button
+              onClick={onSimulateViciCall}
+              className="flex h-8 items-center gap-1.5 rounded-full border border-[#F5B021]/50 bg-[#F5B021]/15 px-3.5 text-xs font-bold text-[#F5B021] shadow-lg shadow-[#F5B021]/10 transition hover:bg-[#F5B021]/25 hover:scale-105 active:scale-95"
+            >
+              <Radio className="size-3.5 animate-pulse text-[#F5B021]" />
+              Demo ViciDial Call
+            </button>
+          )}
+
           <button
             onClick={onRefresh}
             disabled={isRefreshing}
