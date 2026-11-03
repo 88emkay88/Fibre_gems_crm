@@ -515,7 +515,15 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
             />
           )}
           {mode === "agent" && view === "callbacks" && (
-            <CallbackQueueView items={queue} today={today} onSelect={setSelected} />
+            <CallbackQueueView
+              items={queue}
+              today={today}
+              onSelect={setSelected}
+              onOpenDetails={(c) => {
+                setDrawerCustomer(c as any);
+                setDrawerOpen(true);
+              }}
+            />
           )}
           {mode === "agent" && view === "worklist" && (
             <Worklist customers={customers} onSelect={setSelected} />

@@ -44,9 +44,15 @@ interface CallbackQueueViewProps {
   items: QueueItem<Customer>[];
   today: string;
   onSelect: (customer: Customer) => void;
+  onOpenDetails: (customer: Customer) => void;
 }
 
-export function CallbackQueueView({ items, today, onSelect }: CallbackQueueViewProps) {
+export function CallbackQueueView({
+  items,
+  today,
+  onSelect,
+  onOpenDetails,
+}: CallbackQueueViewProps) {
   const [filter, setFilter] = useState<Filter>("all");
   const shown = items.filter((item) => matchesFilter(item, filter, today));
 
@@ -87,7 +93,17 @@ export function CallbackQueueView({ items, today, onSelect }: CallbackQueueViewP
           return (
             <article
               key={c.id}
-              className={`rounded-2xl border bg-card p-5 shadow-sm ${cardTone[urgency]}`}
+              role="button"
+              tabIndex={0}
+              onClick={() => onOpenDetails(c)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onOpenDetails(c);
+                }
+              }}
+              aria-label={`View details for ${name}`}
+              className={`cursor-pointer rounded-2xl border bg-card p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${cardTone[urgency]}`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -109,7 +125,8 @@ export function CallbackQueueView({ items, today, onSelect }: CallbackQueueViewP
                   variant="outline"
                   size="sm"
                   className="rounded-full"
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     void navigator.clipboard
                       .writeText(c.cell_number)
                       .then(() => toast.success("Number copied"));
@@ -118,7 +135,14 @@ export function CallbackQueueView({ items, today, onSelect }: CallbackQueueViewP
                   <Copy />
                   Copy number
                 </Button>
-                <Button size="sm" className="rounded-full" onClick={() => onSelect(c)}>
+                <Button
+                  size="sm"
+                  className="rounded-full"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelect(c);
+                  }}
+                >
                   <Phone />
                   Log outcome
                 </Button>

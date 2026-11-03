@@ -7,7 +7,9 @@ import {
   User,
   Package,
   ClipboardList,
+  Copy,
 } from "lucide-react";
+import { toast } from "sonner";
 import {
   Sheet,
   SheetContent,
@@ -46,18 +48,49 @@ function Detail({
   value?: string | null | undefined;
   mono?: boolean;
 }) {
+  const copy = () => {
+    if (!value) return;
+    void navigator.clipboard.writeText(value).then(() => toast.success(`${label} copied`));
+  };
+
   return (
-    <div className="min-w-0">
+    <div className="group min-w-0">
       <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </dt>
-      <dd
-        className={`mt-1 truncate text-sm font-medium text-foreground ${mono ? "font-mono" : ""}`}
-      >
-        {value || "—"}
+      <dd className="mt-1 flex items-start gap-2 text-sm font-medium text-foreground">
+        <span className={`min-w-0 select-text break-words ${mono ? "font-mono" : ""}`}>
+          {value || "—"}
+        </span>
+        {value && (
+          <button
+            type="button"
+            onClick={copy}
+            aria-label={`Copy ${label}`}
+            className="mt-0.5 shrink-0 rounded-full p-1 text-muted-foreground opacity-60 transition hover:bg-muted hover:text-foreground focus-visible:opacity-100 md:opacity-0 md:group-hover:opacity-100"
+          >
+            <Copy className="size-3.5" />
+          </button>
+        )}
       </dd>
     </div>
   );
+}
+
+function customerSummary(customer: Customer) {
+  const name = customer.full_name || `${customer.first_name} ${customer.surname}`;
+  return [
+    `Name: ${name}`,
+    `Primary cell: ${customer.cell_number}`,
+    `Alternate phone: ${customer.alternate_cell_number || "-"}`,
+    `Email: ${customer.email || "-"}`,
+    `Address: ${customer.full_address || "-"}`,
+    `Area: ${customer.area_suburb || "-"}`,
+    `Product: ${customer.product_package || "-"}`,
+    `Payment type: ${customer.payment_type || "Prepaid"}`,
+    `EasyPay number: ${customer.easypay_number || "-"}`,
+    `Next action: ${customer.next_action || "-"}`,
+  ].join("\n");
 }
 
 function Panel({
@@ -151,14 +184,29 @@ export function CustomerDrawer({
                 {customer.area_suburb || "Area not set"} · Added {customer.created_at.slice(0, 10)}
               </SheetDescription>
             </div>
-            <Button
-              size="sm"
-              onClick={() => onCall(customer)}
-              className="shrink-0 gap-1.5 rounded-full px-4 shadow-sm"
-            >
-              <PhoneCall />
-              Call
-            </Button>
+            <div className="flex shrink-0 items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  void navigator.clipboard
+                    .writeText(customerSummary(customer))
+                    .then(() => toast.success("Customer details copied"));
+                }}
+                className="gap-1.5 rounded-full px-4"
+              >
+                <Copy />
+                Copy details
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => onCall(customer)}
+                className="gap-1.5 rounded-full px-4 shadow-sm"
+              >
+                <PhoneCall />
+                Call
+              </Button>
+            </div>
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
