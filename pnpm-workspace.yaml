@@ -1,3 +1,6 @@
 allowBuilds:
   es5-ext: false
   esbuild: false
+
+overrides:
+  '@tanstack/router-core': '1.171.34'

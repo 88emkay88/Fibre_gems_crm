@@ -13,6 +13,7 @@ import {
   Clock3,
   Copy,
   LayoutDashboard,
+  LayoutGrid,
   LogOut,
   Menu,
   Phone,
@@ -30,6 +31,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AgilitySync } from "@/components/agility-sync";
+import { TopMetricsBar } from "./telephony/TopMetricsBar";
+import { PipelineBoard } from "./telephony/PipelineBoard";
+import { CustomerDrawer } from "./telephony/CustomerDrawer";
+import { SoftphoneBar } from "./telephony/SoftphoneBar";
+import { dialCustomerApi, updateStageApi } from "./telephony/telephony-service";
+import type { AgentTelephonyState } from "./telephony/types";
 
 type Customer = {
   id: string;
@@ -152,10 +159,56 @@ function Empty({ title }: { title: string }) {
 export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const [view, setView] = useState(mode === "admin" ? "dashboard" : "callbacks");
+  const [view, setView] = useState(mode === "admin" ? "dashboard" : "kanban");
   const [menu, setMenu] = useState(false);
   const [selected, setSelected] = useState<Customer | null>(null);
   const [leadOpen, setLeadOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerCustomer, setDrawerCustomer] = useState<Customer | null>(null);
+  const [telephonyState, setTelephonyState] = useState<AgentTelephonyState>({
+    agentStatus: "ready",
+    pauseCode: null,
+    activeCustomerId: null,
+    activeCustomerName: null,
+    activeCustomerPhone: null,
+    callDurationSeconds: 0,
+    isMuted: false,
+    isOnHold: false,
+  });
+
+  const handleCall = async (customer: Customer) => {
+    setDrawerCustomer(customer);
+    setTelephonyState((prev) => ({
+      ...prev,
+      agentStatus: "in_call",
+      pauseCode: null,
+      activeCustomerId: customer.id,
+      activeCustomerName: customer.full_name || `${customer.first_name} ${customer.surname}`,
+      activeCustomerPhone: customer.cell_number,
+      callDurationSeconds: 0,
+      isMuted: false,
+      isOnHold: false,
+    }));
+    await dialCustomerApi(
+      customer.id,
+      customer.cell_number,
+      customer.full_name || `${customer.first_name} ${customer.surname}`
+    );
+  };
+
+  const handleMoveCustomer = async (customerId: string, targetStatus: string) => {
+    qc.setQueryData(["crm-workspace", mode], (old: any) => {
+      if (!old?.customers) return old;
+      return {
+        ...old,
+        customers: old.customers.map((c: any) =>
+          c.id === customerId ? { ...c, status: targetStatus } : c
+        ),
+      };
+    });
+    await updateStageApi(customerId, targetStatus);
+    refresh();
+  };
 
   useEffect(() => {
     document.documentElement.classList.add("dark");
@@ -212,6 +265,7 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
   const navigation =
     mode === "agent"
       ? [
+          { id: "kanban", label: "Pipeline Command (REMI)", icon: LayoutGrid },
           { id: "callbacks", label: "Today's Call Backs", icon: Phone },
           { id: "worklist", label: "All Assigned Leads", icon: ClipboardList },
           { id: "newlead", label: "New Lead Capture", icon: Plus },
@@ -234,6 +288,8 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
           sync: "Agility Sync",
           agents: "Manage Agents",
         } as Record<string, string>)[view]
+      : view === "kanban"
+      ? "REMI Agent Telephony & Pipeline Command"
       : "Daily Execution Command";
 
   async function logout() {
@@ -317,7 +373,7 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
           </Button>
         </div>
       </aside>
-      <main className="min-h-screen lg:ml-64">
+      <main className="min-h-screen lg:ml-64 pb-24">
         <header className="flex min-h-20 items-center justify-between gap-3 border-b border-border px-4 md:px-8">
           <div className="flex min-w-0 items-center gap-3">
             <Button
@@ -341,20 +397,51 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
               <RefreshCw />
             </Button>
             {mode === "agent" && (
-              <Button onClick={() => setView("newlead")}>
+              <Button onClick={() => setLeadOpen(true)}>
                 <Plus />
                 <span className="hidden sm:inline">Quick lead</span>
               </Button>
             )}
           </div>
         </header>
-        <div className="mx-auto max-w-[1500px] space-y-7 p-4 md:p-8">
+        <div className="mx-auto max-w-[1600px] space-y-7 p-4 md:p-8">
           {workspaceQ.isError ? (
             <div className="border border-destructive p-4 text-destructive">
               Unable to load CRM data. <Button variant="link" onClick={refresh}>Retry</Button>
             </div>
           ) : null}
-          {mode === "agent" && (
+
+          {mode === "agent" && view === "kanban" && (
+            <div className="space-y-6">
+              <TopMetricsBar
+                scheduledToday={due.length}
+                completedToday={completed.size}
+                remainingCalls={customers.filter((c) => c.status !== "activated" && c.status !== "lost").length}
+                totalTouches={activities.filter((a) => a.actor_id === me.data?.id && a.created_at?.slice(0, 10) === today).length}
+                completionRate={
+                  due.length + completed.size > 0
+                    ? Math.round((completed.size / (due.length + completed.size)) * 100)
+                    : 0
+                }
+                onRefresh={refresh}
+                onQuickLead={() => setLeadOpen(true)}
+                isRefreshing={workspaceQ.isFetching}
+              />
+
+              <PipelineBoard
+                customers={customers as any}
+                onSelectCustomer={(c) => {
+                  setDrawerCustomer(c as any);
+                  setDrawerOpen(true);
+                }}
+                onCallCustomer={handleCall}
+                onMoveCustomer={handleMoveCustomer}
+                activeDialingId={telephonyState.activeCustomerId}
+              />
+            </div>
+          )}
+
+          {mode === "agent" && view !== "kanban" && (
             <AgentStats
               customers={customers}
               activities={activities}
@@ -421,6 +508,23 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
             />
           </DialogContent>
         </Dialog>
+      )}
+      {mode === "agent" && (
+        <>
+          <SoftphoneBar
+            telephonyState={telephonyState}
+            setTelephonyState={setTelephonyState}
+            onDispositionComplete={refresh}
+          />
+          <CustomerDrawer
+            customer={drawerCustomer as any}
+            activities={activities as any}
+            isOpen={drawerOpen}
+            onClose={() => setDrawerOpen(false)}
+            onCall={handleCall}
+            onRefreshData={refresh}
+          />
+        </>
       )}
     </div>
   );
