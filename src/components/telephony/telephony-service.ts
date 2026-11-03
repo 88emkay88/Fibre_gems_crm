@@ -2,6 +2,7 @@ import { toast } from "sonner";
 import { logOutcomeFn } from "@/server/functions";
 import {
   dialCustomerFn,
+  dialNumberFn,
   hangupCallFn,
   setCallHoldFn,
   setCallMuteFn,
@@ -32,6 +33,22 @@ export async function dialCustomerApi(customerId: string, phone: string, fullNam
   } catch (err) {
     toast.error("Could not place the call", { description: errorMessage(err) });
     return false;
+  }
+}
+
+export interface DialResult {
+  customerId: string | null;
+  customerName: string | null;
+}
+
+export async function dialNumberApi(phone: string): Promise<DialResult | null> {
+  try {
+    const result = await dialNumberFn({ data: { phone } });
+    toast.success(`Calling ${result.customerName ?? phone}`, { description: `Phone: ${phone}` });
+    return result;
+  } catch (err) {
+    toast.error("Could not place the call", { description: errorMessage(err) });
+    return null;
   }
 }
 

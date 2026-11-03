@@ -33,6 +33,7 @@ import {
   logOutcomeFn,
 } from "@/server/functions";
 import { Button } from "@/components/ui/button";
+import { QuickDialDialog } from "./telephony/QuickDialDialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -51,7 +52,7 @@ import { buildCallQueue } from "./telephony/call-queue";
 import { CallbackQueueView } from "./agent-callbacks";
 import { CustomerDrawer } from "./telephony/CustomerDrawer";
 import { SoftphoneBar } from "./telephony/SoftphoneBar";
-import { dialCustomerApi, updateStageApi } from "./telephony/telephony-service";
+import { dialCustomerApi, updateStageApi, type DialResult } from "./telephony/telephony-service";
 import type { AgentTelephonyState } from "./telephony/types";
 
 type Customer = {
@@ -189,6 +190,7 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
   const [menu, setMenu] = useState(false);
   const [selected, setSelected] = useState<Customer | null>(null);
   const [leadOpen, setLeadOpen] = useState(false);
+  const [dialOpen, setDialOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerCustomer, setDrawerCustomer] = useState<Customer | null>(null);
   const [telephonyState, setTelephonyState] = useState<AgentTelephonyState>({
@@ -201,6 +203,20 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
     isMuted: false,
     isOnHold: false,
   });
+
+  const handleQuickDialed = (phone: string, match: DialResult) => {
+    setTelephonyState((prev) => ({
+      ...prev,
+      agentStatus: "in_call",
+      pauseCode: null,
+      activeCustomerId: match.customerId,
+      activeCustomerName: match.customerName ?? phone,
+      activeCustomerPhone: phone,
+      callDurationSeconds: 0,
+      isMuted: false,
+      isOnHold: false,
+    }));
+  };
 
   const handleCall = async (customer: Customer) => {
     setDrawerCustomer(customer);
@@ -436,6 +452,12 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
               <RefreshCw />
             </Button>
             {mode === "agent" && (
+              <Button variant="outline" onClick={() => setDialOpen(true)}>
+                <Phone />
+                <span className="hidden sm:inline">Dial</span>
+              </Button>
+            )}
+            {mode === "agent" && (
               <Button onClick={() => setLeadOpen(true)}>
                 <Plus />
                 <span className="hidden sm:inline">Quick lead</span>
@@ -585,6 +607,11 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
       )}
       {mode === "agent" && (
         <>
+          <QuickDialDialog
+            open={dialOpen}
+            onOpenChange={setDialOpen}
+            onDialed={handleQuickDialed}
+          />
           <SoftphoneBar
             telephonyState={telephonyState}
             setTelephonyState={setTelephonyState}
@@ -653,7 +680,9 @@ function AgentStats({
             style={{ width: `${scheduled ? (done / scheduled) * 100 : 0}%` }}
           />
         </div>
-        <span className="text-white/30">{scheduled ? Math.round((done / scheduled) * 100) : 0}%</span>
+        <span className="text-white/30">
+          {scheduled ? Math.round((done / scheduled) * 100) : 0}%
+        </span>
       </div>
     </section>
   );

@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { getCurrentUser, type AuthUser } from "./auth";
 import { getDb, isMockMode, mockStore } from "./db";
 import { customers } from "./db/schema";
@@ -13,6 +13,42 @@ import {
 } from "./vicidial.server";
 
 const DISPOSITION_CODES = ["SALE", "CALLBACK", "PAYMENT_PROMISED", "NI", "DNC"] as const;
+
+function lastNineDigits(value: string): string {
+  return value.replace(/\D/g, "").slice(-9);
+}
+
+async function findVisibleCustomerByPhone(
+  user: AuthUser,
+  phone: string,
+): Promise<{ id: string; name: string } | null> {
+  const suffix = lastNineDigits(phone);
+  if (isMockMode()) {
+    const found = Array.from(mockStore.customers.values()).find(
+      (c) =>
+        lastNineDigits(c.cellNumber) === suffix && (user.role === "admin" || c.ownerId === user.id),
+    );
+    return found
+      ? { id: found.id, name: found.fullName || `${found.firstName} ${found.surname}` }
+      : null;
+  }
+  const [row] = await getDb()
+    .select({
+      id: customers.id,
+      firstName: customers.firstName,
+      surname: customers.surname,
+      fullName: customers.fullName,
+    })
+    .from(customers)
+    .where(
+      and(
+        sql`right(regexp_replace(${customers.cellNumber}, '\\D', '', 'g'), 9) = ${suffix}`,
+        user.role === "admin" ? undefined : eq(customers.ownerId, user.id),
+      ),
+    )
+    .limit(1);
+  return row ? { id: row.id, name: row.fullName || `${row.firstName} ${row.surname}` } : null;
+}
 
 async function requireUser(): Promise<AuthUser> {
   const user = await getCurrentUser();
@@ -68,6 +104,19 @@ export const dialCustomerFn = createServerFn({ method: "POST" })
     const phone = await requireAssignedCustomerPhone(data.customerId);
     unwrapDialer(await dialNumber({ phone, customerId: data.customerId }));
     return { success: true };
+  });
+
+export const dialNumberFn = createServerFn({ method: "POST" })
+  .validator((data: { phone: string }) => {
+    const raw = typeof data?.phone === "string" ? data.phone.trim() : "";
+    if (!/^\+?[\d\s()-]{7,20}$/.test(raw)) throw new Error("Enter a valid phone number");
+    return { phone: raw.replace(/[^\d+]/g, "") };
+  })
+  .handler(async ({ data }) => {
+    const user = await requireUser();
+    const match = await findVisibleCustomerByPhone(user, data.phone);
+    unwrapDialer(await dialNumber({ phone: data.phone, customerId: match?.id ?? null }));
+    return { customerId: match?.id ?? null, customerName: match?.name ?? null };
   });
 
 export const hangupCallFn = createServerFn({ method: "POST" }).handler(async () => {

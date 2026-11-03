@@ -5,12 +5,19 @@ import type { Customer } from "./types";
 
 interface LeadCardProps {
   customer: Customer;
-  onSelect: (customer: Customer) => void;
   onCall: (customer: Customer) => void;
+  onPointerDown?: (e: React.PointerEvent<HTMLElement>) => void;
   isDialing?: boolean;
+  isDragging?: boolean;
 }
 
-export function LeadCard({ customer, onSelect, onCall, isDialing = false }: LeadCardProps) {
+export function LeadCard({
+  customer,
+  onCall,
+  onPointerDown,
+  isDialing = false,
+  isDragging = false,
+}: LeadCardProps) {
   const normPhone = customer.cell_number.replace(/\D/g, "");
   const saPhone = normPhone.startsWith("0") ? `27${normPhone.slice(1)}` : normPhone;
   const name = customer.full_name || `${customer.first_name} ${customer.surname}`;
@@ -38,22 +45,18 @@ export function LeadCard({ customer, onSelect, onCall, isDialing = false }: Lead
 
   return (
     <article
-      onClick={() => onSelect(customer)}
-      draggable
-      onDragStart={(e) => e.dataTransfer.setData("text/plain", customer.id)}
-      className={`group cursor-grab rounded-xl border bg-[#141414] p-3 transition-all duration-200 hover:-translate-y-0.5 active:cursor-grabbing ${
+      onPointerDown={onPointerDown}
+      className={`group cursor-grab touch-none select-none rounded-xl border bg-[#141414] p-3 transition-all duration-200 hover:-translate-y-0.5 active:cursor-grabbing ${
         isDialing
           ? "border-[#F5B021]/30 shadow-[0_0_20px_rgba(245,176,33,0.15)]"
           : "border-white/5 hover:border-white/10"
-      }`}
+      } ${isDragging ? "opacity-40" : ""}`}
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <h4 className="truncate text-sm font-semibold text-white">{name}</h4>
-          <p className="truncate text-xs text-white/40">
-            {customer.area_suburb || "—"}
-          </p>
+          <p className="truncate text-xs text-white/40">{customer.area_suburb || "—"}</p>
         </div>
         {customer.product_package && (
           <span className="shrink-0 rounded-full bg-white/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/40">
