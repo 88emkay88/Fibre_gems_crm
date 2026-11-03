@@ -58,6 +58,11 @@ export const customers = pgTable("customers", {
   areaSuburb: text("area_suburb"),
   productPackage: text("product_package"),
   paymentType: text("payment_type"),
+  easypayNumber: text("easypay_number"),
+  easypayCycle: integer("easypay_cycle"),
+  easypayExpiry: date("easypay_expiry"),
+  referralCode: text("referral_code").unique(),
+  vicidialLeadId: text("vicidial_lead_id"),
   ownerId: uuid("owner_id").notNull().references(() => profiles.id),
   originalAgentId: uuid("original_agent_id").notNull().references(() => profiles.id),
   teamLeaderId: uuid("team_leader_id").references(() => profiles.id),
@@ -162,4 +167,20 @@ export const agilityImportRows = pgTable("agility_import_rows", {
   validationStatus: text("validation_status").notNull().default("pending"),
   validationErrors: jsonb("validation_errors").notNull().default([]),
   customerId: uuid("customer_id").references(() => customers.id, { onDelete: "set null" }),
+});
+
+export const callEvents = pgTable("call_events", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  customerId: uuid("customer_id").references(() => customers.id, { onDelete: "cascade" }),
+  agentId: uuid("agent_id").references(() => profiles.id),
+  vicidialLeadId: text("vicidial_lead_id"),
+  phoneNumber: text("phone_number").notNull(),
+  direction: text("direction").notNull().default("outbound"),
+  status: text("status").notNull().default("dialing"),
+  disposition: text("disposition"),
+  durationSeconds: integer("duration_seconds"),
+  notes: text("notes"),
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+  endedAt: timestamp("ended_at", { withTimezone: true }),
+  raw: jsonb("raw"),
 });

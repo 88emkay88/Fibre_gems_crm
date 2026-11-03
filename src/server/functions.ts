@@ -1,7 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getCurrentUser, createSession, destroySession, hashPassword, verifyPassword, type AuthUser } from "./auth";
 import { getDb, isMockMode, mockStore, type MockCustomer, type MockActivity, type MockOrder, type MockBatch } from "./db";
-import { customers, orders, payments, activations, activities, profiles, userRoles, agilityImportBatches, agilityImportRows } from "./db/schema";
+import { customers, orders, payments, activations, activities, profiles, userRoles, agilityImportBatches, agilityImportRows, callEvents } from "./db/schema";
+import { fetchAgentStatus, dialNumber, hangUpCall, setHold, setMute, transferCall, postDisposition, remiApiUrl } from "./vicidial.server";
 import { eq, desc, and } from "drizzle-orm";
 import crypto from "node:crypto";
 
@@ -250,10 +251,14 @@ export const getWorkspaceDataFn = createServerFn({ method: "GET" })
         first_name: customers.firstName,
         surname: customers.surname,
         cell_number: customers.cellNumber,
-        area_suburb: customers.areaSuburb,
-        product_package: customers.productPackage,
-        payment_type: customers.paymentType,
-        status: customers.status,
+        email: customers.email,
+        full_address: customers.fullAddress,
+        alternate_cell_number: customers.alternateCellNumber,
+        easypay_number: customers.easypayNumber,
+        easypay_cycle: customers.easypayCycle,
+        easypay_expiry: customers.easypayExpiry,
+        referral_code: customers.referralCode,
+        vicidial_lead_id: customers.vicidialLeadId,
         owner_id: customers.ownerId,
         next_action: customers.nextAction,
         next_action_date: customers.nextActionDate,
