@@ -268,7 +268,7 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
               <Shield className="size-5" />
             </div>
             <div>
-              <div className="font-bold">FibreGems</div>
+              <div className="font-bold text-white">FibreGems</div>
               <div className="text-[10px] uppercase text-primary">
                 {mode === "admin" ? "Command Centre" : "Agent Daily Workspace"}
               </div>
@@ -284,7 +284,7 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
               {name.slice(0, 1).toUpperCase()}
             </div>
             <div className="min-w-0">
-              <div className="truncate text-sm font-semibold">{name}</div>
+              <div className="truncate text-sm font-semibold text-white">{name}</div>
               <div className="text-xs text-muted-foreground">
                 {mode === "admin" ? "System Administrator" : "Sales Agent"}
               </div>
