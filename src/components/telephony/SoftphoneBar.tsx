@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { PictureInPicture2, Check, ChevronDown, Phone } from "lucide-react";
+import { Check, ChevronDown, Phone, PhoneOff } from "lucide-react";
 import { toast } from "sonner";
 import type { AgentTelephonyState } from "./types";
 import {
@@ -8,7 +8,7 @@ import {
   setAgentStatusApi,
   submitDispositionApi,
 } from "./telephony-service";
-import { CallControls } from "./CallControls";
+import { endActiveCall } from "./CallControls";
 import { ActiveCallPanel } from "./ActiveCallPanel";
 
 const PAUSE_CODES = ["LUNCH", "TEA", "MEETING", "TRAINING", "WRAPUP"];
@@ -23,18 +23,19 @@ const DISPOSITIONS = [
 interface SoftphoneBarProps {
   telephonyState: AgentTelephonyState;
   setTelephonyState: React.Dispatch<React.SetStateAction<AgentTelephonyState>>;
+  onOpenDial: () => void;
   onDispositionComplete?: (customerId: string) => void;
 }
 
 export function SoftphoneBar({
   telephonyState,
   setTelephonyState,
+  onOpenDial,
   onDispositionComplete,
 }: SoftphoneBarProps) {
   const [selectedDispo, setSelectedDispo] = useState("SALE");
   const [callbackDate, setCallbackDate] = useState(() => jhbDateOffset(1));
   const [pauseMenuOpen, setPauseMenuOpen] = useState(false);
-  const [callLayout, setCallLayout] = useState<"dock" | "float">("dock");
   const [isSaving, setIsSaving] = useState(false);
 
   const isCallActive =
@@ -121,17 +122,31 @@ export function SoftphoneBar({
 
   return (
     <>
-      {isCallActive && callLayout === "float" && (
-        <ActiveCallPanel
-          telephonyState={telephonyState}
-          setTelephonyState={setTelephonyState}
-          onDock={() => setCallLayout("dock")}
-        />
+      {isCallActive && (
+        <ActiveCallPanel telephonyState={telephonyState} setTelephonyState={setTelephonyState} />
       )}
 
-      <div className="fixed bottom-5 left-1/2 z-50 w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 lg:left-[calc(50%+8rem)]">
-        <div className="flex flex-col gap-3 rounded-[20px] border border-white/10 bg-[#111111]/95 p-3 shadow-[0_20px_60px_rgba(0,0,0,0.6)] backdrop-blur-2xl">
-          {/* Status row */}
+      <div className="fixed bottom-5 left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2 items-center gap-3 lg:left-[calc(50%+8rem)]">
+        {isCallActive ? (
+          <button
+            onClick={() => endActiveCall(setTelephonyState)}
+            aria-label="Hang up"
+            className="grid size-14 shrink-0 place-items-center rounded-full bg-[#D44B2E] text-white shadow-[0_12px_30px_rgba(212,75,46,0.35)] transition hover:scale-105 active:scale-95"
+          >
+            <PhoneOff className="size-6" />
+          </button>
+        ) : (
+          <button
+            onClick={onOpenDial}
+            disabled={telephonyState.agentStatus === "dialing"}
+            aria-label="Dial a number"
+            className="grid size-14 shrink-0 place-items-center rounded-full bg-[#22C55E] text-black shadow-[0_12px_30px_rgba(34,197,94,0.35)] transition hover:scale-105 active:scale-95 disabled:opacity-50"
+          >
+            <Phone className="size-6" />
+          </button>
+        )}
+
+        <div className="flex min-w-0 flex-1 flex-col gap-3 rounded-[20px] border border-white/10 bg-[#111111]/95 p-3 shadow-[0_20px_60px_rgba(0,0,0,0.6)] backdrop-blur-2xl">
           <div className="flex items-center justify-between gap-3 px-1">
             <div className="flex min-w-0 items-center gap-2.5">
               <span
@@ -144,26 +159,15 @@ export function SoftphoneBar({
                 <p className="truncate text-xs text-white/40">
                   {isCallActive
                     ? telephonyState.activeCustomerPhone || ""
-                    : "Click Call on a lead to dial"}
+                    : "Dial a number, or click Call on a lead"}
                 </p>
               </div>
             </div>
 
             {isCallActive ? (
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-lg font-bold tabular-nums text-[#F5B021]">
-                  {formatCallTime(telephonyState.callDurationSeconds)}
-                </span>
-                {callLayout === "dock" && (
-                  <button
-                    onClick={() => setCallLayout("float")}
-                    aria-label="Pop out call panel"
-                    className="grid size-8 place-items-center rounded-full border border-white/10 bg-white/5 text-white/60 transition hover:bg-white/10 hover:text-white"
-                  >
-                    <PictureInPicture2 className="size-4" />
-                  </button>
-                )}
-              </div>
+              <span className="font-mono text-lg font-bold tabular-nums text-[#F5B021]">
+                {formatCallTime(telephonyState.callDurationSeconds)}
+              </span>
             ) : (
               <div className="relative">
                 <button
@@ -198,17 +202,6 @@ export function SoftphoneBar({
               </div>
             )}
           </div>
-
-          {isCallActive && callLayout === "dock" && (
-            <CallControls telephonyState={telephonyState} setTelephonyState={setTelephonyState} />
-          )}
-
-          {isCallActive && callLayout === "float" && (
-            <p className="flex items-center justify-center gap-2 px-1 pb-1 text-xs text-white/30">
-              <Phone className="size-3.5" />
-              Call controls are in the floating panel
-            </p>
-          )}
 
           {!isCallActive && (
             <div className="flex items-center gap-2">

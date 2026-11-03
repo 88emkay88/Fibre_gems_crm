@@ -452,12 +452,6 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
               <RefreshCw />
             </Button>
             {mode === "agent" && (
-              <Button variant="outline" onClick={() => setDialOpen(true)}>
-                <Phone />
-                <span className="hidden sm:inline">Dial</span>
-              </Button>
-            )}
-            {mode === "agent" && (
               <Button onClick={() => setLeadOpen(true)}>
                 <Plus />
                 <span className="hidden sm:inline">Quick lead</span>
@@ -615,6 +609,7 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
           <SoftphoneBar
             telephonyState={telephonyState}
             setTelephonyState={setTelephonyState}
+            onOpenDial={() => setDialOpen(true)}
             onDispositionComplete={openNextQueued}
           />
           <CustomerDrawer

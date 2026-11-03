@@ -5,8 +5,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type SetStateAction,
 } from "react";
-import { PanelBottom, Phone } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Phone } from "lucide-react";
 import type { AgentTelephonyState } from "./types";
 import { CallControls } from "./CallControls";
 import { formatCallTime } from "./telephony-service";
@@ -17,16 +16,11 @@ const EDGE_MARGIN = 8;
 type ActiveCallPanelProps = {
   telephonyState: AgentTelephonyState;
   setTelephonyState: Dispatch<SetStateAction<AgentTelephonyState>>;
-  onDock: () => void;
 };
 
 type Position = { x: number; y: number };
 
-export function ActiveCallPanel({
-  telephonyState,
-  setTelephonyState,
-  onDock,
-}: ActiveCallPanelProps) {
+export function ActiveCallPanel({ telephonyState, setTelephonyState }: ActiveCallPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const dragOrigin = useRef<{
     pointerX: number;
@@ -92,15 +86,6 @@ export function ActiveCallPanel({
             </p>
           </div>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onDock}
-          aria-label="Dock call to bottom bar"
-          className="size-8 shrink-0 rounded-full text-muted-foreground"
-        >
-          <PanelBottom className="size-4" />
-        </Button>
       </div>
 
       <p className="text-center font-mono text-3xl font-semibold tabular-nums text-foreground">

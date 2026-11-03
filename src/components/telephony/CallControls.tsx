@@ -22,6 +22,19 @@ type CallControlsProps = {
 const controlClass =
   "flex h-auto flex-col gap-1.5 rounded-2xl bg-muted/60 px-2 py-2.5 text-xs font-medium hover:bg-muted disabled:opacity-50";
 
+export async function endActiveCall(
+  setTelephonyState: Dispatch<SetStateAction<AgentTelephonyState>>,
+) {
+  if (!(await hangupCallApi())) return;
+  setTelephonyState((prev) => ({
+    ...prev,
+    agentStatus: "ready",
+    isOnHold: false,
+    isMuted: false,
+  }));
+  toast.info("Call ended. Choose an outcome to continue.");
+}
+
 export function CallControls({ telephonyState, setTelephonyState }: CallControlsProps) {
   const qc = useQueryClient();
   const [escalateOpen, setEscalateOpen] = useState(false);
@@ -40,17 +53,6 @@ export function CallControls({ telephonyState, setTelephonyState }: CallControls
     if (!(await setCallHoldApi(next))) return;
     setTelephonyState((prev) => ({ ...prev, isOnHold: next }));
     toast(next ? "Caller on hold" : "Call resumed");
-  };
-
-  const hangUp = async () => {
-    if (!(await hangupCallApi())) return;
-    setTelephonyState((prev) => ({
-      ...prev,
-      agentStatus: "ready",
-      isOnHold: false,
-      isMuted: false,
-    }));
-    toast.info("Call ended. Choose an outcome to continue.");
   };
 
   const submitEscalation = async () => {
@@ -114,7 +116,7 @@ export function CallControls({ telephonyState, setTelephonyState }: CallControls
         </Button>
         <Button
           variant="destructive"
-          onClick={hangUp}
+          onClick={() => endActiveCall(setTelephonyState)}
           aria-label="Hang up"
           className="flex h-auto flex-col gap-1.5 rounded-2xl px-2 py-2.5 text-xs font-semibold"
         >
