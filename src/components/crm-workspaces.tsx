@@ -204,22 +204,20 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
 
   const handleCall = async (customer: Customer) => {
     setDrawerCustomer(customer);
+    const name = customer.full_name || `${customer.first_name} ${customer.surname}`;
+    const dialed = await dialCustomerApi(customer.id, customer.cell_number, name);
+    if (!dialed) return;
     setTelephonyState((prev) => ({
       ...prev,
       agentStatus: "in_call",
       pauseCode: null,
       activeCustomerId: customer.id,
-      activeCustomerName: customer.full_name || `${customer.first_name} ${customer.surname}`,
+      activeCustomerName: name,
       activeCustomerPhone: customer.cell_number,
       callDurationSeconds: 0,
       isMuted: false,
       isOnHold: false,
     }));
-    await dialCustomerApi(
-      customer.id,
-      customer.cell_number,
-      customer.full_name || `${customer.first_name} ${customer.surname}`,
-    );
   };
 
   const handleMoveCustomer = async (customerId: string, targetStatus: string) => {

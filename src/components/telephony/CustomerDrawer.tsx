@@ -25,9 +25,8 @@ import {
   escalateLeadApi,
   submitDispositionApi,
   jhbDateOffset,
+  ESCALATION_LEVELS,
 } from "./telephony-service";
-
-const ESCALATION_LEVELS = ["Level 2 - Supervisor Alert", "Level 3 - Operations Escalation"];
 
 interface CustomerDrawerProps {
   customer: Customer | null;

@@ -63,4 +63,3 @@ export type AgentTelephonyState = {
   isOnHold: boolean;
   viciLeadId?: string | null;
 };
-

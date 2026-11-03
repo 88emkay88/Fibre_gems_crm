@@ -24,7 +24,13 @@ const urgencyText: Record<Urgency, string> = {
   critical: "font-semibold text-destructive",
 };
 
-export function LeadQueue({ items, today, activeDialingId, onSelectCustomer, onCallCustomer }: LeadQueueProps) {
+export function LeadQueue({
+  items,
+  today,
+  activeDialingId,
+  onSelectCustomer,
+  onCallCustomer,
+}: LeadQueueProps) {
   return (
     <aside className="flex min-h-0 flex-col rounded-3xl border border-border bg-card p-4 shadow-sm lg:max-h-[calc(100vh-260px)]">
       <header className="mb-3 flex items-center justify-between px-1">
@@ -55,7 +61,9 @@ export function LeadQueue({ items, today, activeDialingId, onSelectCustomer, onC
                 isDialing ? "ring-2 ring-primary/40" : ""
               }`}
             >
-              <span className={`h-10 w-1 shrink-0 rounded-full ${urgency === "critical" ? "bg-destructive" : urgency === "warm" ? "bg-primary" : stage.accent}`} />
+              <span
+                className={`h-10 w-1 shrink-0 rounded-full ${urgency === "critical" ? "bg-destructive" : urgency === "warm" ? "bg-primary" : stage.accent}`}
+              />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-foreground">{name}</p>
                 <p className={`mt-0.5 flex items-center gap-1 text-xs font-medium ${stage.text}`}>
@@ -66,8 +74,8 @@ export function LeadQueue({ items, today, activeDialingId, onSelectCustomer, onC
                   {daysOverdue > 0
                     ? overdueLabel(daysOverdue)
                     : c.next_action_date === today
-                    ? "Due today"
-                    : "New lead, not yet called"}
+                      ? "Due today"
+                      : "New lead, not yet called"}
                 </p>
               </div>
               <button

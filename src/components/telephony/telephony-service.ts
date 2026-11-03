@@ -1,45 +1,68 @@
 import { toast } from "sonner";
 import { logOutcomeFn } from "@/server/functions";
+import {
+  dialCustomerFn,
+  hangupCallFn,
+  setCallHoldFn,
+  setCallMuteFn,
+  submitCallDispositionFn,
+} from "@/server/telephony-functions";
 
-const API_BASE = (import.meta.env.VITE_API_BASE_URL as string) || "http://127.0.0.1:8000/api/v1";
+const API_BASE = (import.meta.env["VITE_API_BASE_URL"] as string) || "http://127.0.0.1:8000/api/v1";
+
+const DISPOSITION_STATUS: Record<string, string> = {
+  SALE: "order_submitted",
+  PAYMENT_PROMISED: "payment_pending",
+  CALLBACK: "contacted",
+  NI: "lost",
+  DNC: "lost",
+};
+
+export const ESCALATION_LEVELS = ["Level 2 - Supervisor Alert", "Level 3 - Operations Escalation"];
+
+function errorMessage(err: unknown) {
+  return err instanceof Error ? err.message : "Something went wrong";
+}
 
 export async function dialCustomerApi(customerId: string, phone: string, fullName: string) {
   try {
-    const res = await fetch(`${API_BASE}/agent/dial`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ customer_id: customerId }),
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      toast.success(`Calling ${fullName} via ViciDial`, {
-        description: `Lead ID: ${data.vici_lead_id || "Active"} | Phone: ${phone}`,
-      });
-      return { success: true, data };
-    }
-  } catch {
-    // If backend isn't reachable yet, fallback simulation for smooth UI experience
+    await dialCustomerFn({ data: { customerId } });
+    toast.success(`Calling ${fullName}`, { description: `Phone: ${phone}` });
+    return true;
+  } catch (err) {
+    toast.error("Could not place the call", { description: errorMessage(err) });
+    return false;
   }
-
-  toast.info(`Connecting Call: ${fullName}`, {
-    description: `Targeting: ${phone} (ViciDial Bridge)`,
-  });
-  return { success: true, simulated: true };
 }
 
-export async function hangupCallApi(customerId?: string | null) {
+export async function hangupCallApi() {
   try {
-    const res = await fetch(`${API_BASE}/agent/hangup`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ customer_id: customerId }),
-    });
-    if (res.ok) return await res.json();
-  } catch {
-    // fallback
+    await hangupCallFn();
+    return true;
+  } catch (err) {
+    toast.error("Could not end the call", { description: errorMessage(err) });
+    return false;
   }
-  return { status: "call_ended", simulated: true };
+}
+
+export async function setCallHoldApi(enabled: boolean) {
+  try {
+    await setCallHoldFn({ data: { enabled } });
+    return true;
+  } catch (err) {
+    toast.error("Hold failed", { description: errorMessage(err) });
+    return false;
+  }
+}
+
+export async function setCallMuteApi(enabled: boolean) {
+  try {
+    await setCallMuteFn({ data: { enabled } });
+    return true;
+  } catch (err) {
+    toast.error("Mute failed", { description: errorMessage(err) });
+    return false;
+  }
 }
 
 export async function setAgentStatusApi(status: "ready" | "paused", pauseCode?: string) {
@@ -62,55 +85,37 @@ export function jhbDateOffset(days: number) {
   });
 }
 
+export function formatCallTime(secs: number) {
+  const m = Math.floor(secs / 60)
+    .toString()
+    .padStart(2, "0");
+  const s = (secs % 60).toString().padStart(2, "0");
+  return `${m}:${s}`;
+}
+
 export async function submitDispositionApi(params: {
   customerId: string;
   disposition: string;
   notes?: string;
   callbackDate?: string | null;
 }) {
-  // 1. Try FastAPI ViciDial endpoint
-  try {
-    const res = await fetch(`${API_BASE}/agent/disposition`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        customer_id: params.customerId,
-        disposition: params.disposition,
-        notes: params.notes,
-        callback_date: params.callbackDate,
-      }),
-    });
-    if (res.ok) {
-      toast.success("Disposition logged to ViciDial & CRM");
-      return await res.json();
-    }
-  } catch {
-    // fallback to server function
-  }
-
-  // 2. Fallback to existing server RPC function
-  const statusMap: Record<string, string> = {
-    SALE: "order_submitted",
-    PAYMENT_PROMISED: "payment_pending",
-    CALLBACK: "contacted",
-    NI: "lost",
-    DNC: "lost",
-  };
-  const targetStatus = statusMap[params.disposition] || "contacted";
+  const notes = params.notes || `Disposition: ${params.disposition}`;
+  await submitCallDispositionFn({
+    data: { customerId: params.customerId, disposition: params.disposition, notes },
+  });
 
   await logOutcomeFn({
     data: {
       customerId: params.customerId,
       outcome: params.disposition,
-      status: targetStatus,
+      status: DISPOSITION_STATUS[params.disposition] ?? "contacted",
       nextAction: params.disposition === "CALLBACK" ? "Scheduled Callback" : null,
       nextActionDate: params.callbackDate || null,
-      notes: params.notes || `Disposition: ${params.disposition}`,
+      notes,
     },
   });
 
-  toast.success(`Disposition Saved: ${params.disposition}`);
-  return { success: true };
+  toast.success(`Outcome saved: ${params.disposition}`);
 }
 
 export async function updateStageApi(customerId: string, newStatus: string) {
@@ -125,7 +130,6 @@ export async function updateStageApi(customerId: string, newStatus: string) {
     // fallback
   }
 
-  // Fallback to server function
   await logOutcomeFn({
     data: {
       customerId,
@@ -173,20 +177,6 @@ export async function reissueEasyPayApi(customerId: string) {
 }
 
 export async function escalateLeadApi(customerId: string, level: string, reason: string) {
-  try {
-    const res = await fetch(`${API_BASE}/customers/${customerId}/escalate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ level, reason }),
-    });
-    if (res.ok) {
-      toast.warning(`Escalation Dispatched: ${level}`);
-      return await res.json();
-    }
-  } catch {
-    // fallback
-  }
-
   await logOutcomeFn({
     data: {
       customerId,
@@ -197,6 +187,5 @@ export async function escalateLeadApi(customerId: string, level: string, reason:
       notes: `${level}: ${reason}`,
     },
   });
-  toast.warning(`Escalation Dispatched: ${level}`, { description: reason });
-  return { success: true };
+  toast.warning(`Escalation logged: ${level}`, { description: reason });
 }
