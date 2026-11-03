@@ -34,7 +34,6 @@ export function PipelineBoard({
     <div className="flex snap-x gap-3 overflow-x-auto pb-4">
       {PIPELINE_STAGES.map((stage) => {
         const stageCustomers = customers.filter((c) => stage.statuses.includes(c.status));
-        const Icon = stage.icon;
         const isOver = dragOverStage === stage.id;
 
         return (
@@ -46,17 +45,18 @@ export function PipelineBoard({
             }}
             onDragLeave={() => setDragOverStage(null)}
             onDrop={(e) => handleDrop(e, stage)}
-            className={`flex min-w-[220px] flex-1 snap-start flex-col rounded-3xl border p-3 transition-colors duration-200 ${
-              isOver ? "border-primary bg-accent/60" : "border-border bg-muted/50"
+            className={`flex min-w-[240px] flex-1 snap-start flex-col rounded-3xl p-3 ring-1 transition-all duration-200 ${
+              isOver ? "bg-accent ring-2 ring-primary/40" : "bg-muted/60 ring-black/[0.04]"
             }`}
           >
-            <header className="mb-3 flex items-center justify-between px-1">
-              <div className="flex items-center gap-2.5">
-                <span className={`h-5 w-1 rounded-full ${stage.accent}`} />
-                <Icon className="size-4 text-muted-foreground" />
-                <h3 className="text-sm font-semibold text-foreground">{stage.title}</h3>
+            <header className="mb-3 flex items-center justify-between gap-2 px-2 pt-1">
+              <div className="flex min-w-0 items-center gap-2">
+                <span className={`size-2 shrink-0 rounded-full ${stage.accent}`} />
+                <h3 className="truncate text-sm font-semibold tracking-tight text-foreground">
+                  {stage.title}
+                </h3>
               </div>
-              <span className="rounded-full bg-card px-2 py-0.5 text-xs font-semibold tabular-nums text-muted-foreground shadow-sm">
+              <span className="min-w-6 rounded-full bg-card px-2 py-0.5 text-center text-xs font-semibold tabular-nums text-foreground shadow-sm ring-1 ring-black/5">
                 {stageCustomers.length}
               </span>
             </header>

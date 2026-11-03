@@ -48,8 +48,12 @@ function Detail({
 }) {
   return (
     <div className="min-w-0">
-      <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className={`mt-0.5 truncate text-sm text-foreground ${mono ? "font-mono" : ""}`}>
+      <dt className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+        {label}
+      </dt>
+      <dd
+        className={`mt-1 truncate text-sm font-medium text-foreground ${mono ? "font-mono" : ""}`}
+      >
         {value || "—"}
       </dd>
     </div>
@@ -66,9 +70,9 @@ function Panel({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-border bg-card p-5">
+    <section className="rounded-3xl bg-card p-5 shadow-sm ring-1 ring-black/5">
       <h4 className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground">
-        <Icon className="size-4 text-muted-foreground" />
+        <Icon className="size-4 text-primary" />
         {title}
       </h4>
       {children}
@@ -137,10 +141,10 @@ export function CustomerDrawer({
         side="right"
         className="flex h-full w-full flex-col gap-0 border-l border-border bg-background p-0 sm:max-w-xl"
       >
-        <SheetHeader className="space-y-3 border-b border-border bg-card p-6 text-left">
+        <SheetHeader className="space-y-4 border-b border-border/70 bg-card/90 p-6 text-left backdrop-blur-xl">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0 space-y-1">
-              <SheetTitle className="truncate text-xl font-semibold text-foreground">
+              <SheetTitle className="truncate text-2xl font-semibold tracking-tight text-foreground">
                 {name}
               </SheetTitle>
               <SheetDescription className="text-sm text-muted-foreground">
@@ -150,7 +154,7 @@ export function CustomerDrawer({
             <Button
               size="sm"
               onClick={() => onCall(customer)}
-              className="shrink-0 gap-1.5 rounded-full px-4"
+              className="shrink-0 gap-1.5 rounded-full px-4 shadow-sm"
             >
               <PhoneCall />
               Call
@@ -232,7 +236,10 @@ export function CustomerDrawer({
           {activeTab === "history" && (
             <section className="space-y-3">
               {customerActivities.map((act) => (
-                <div key={act.id} className="rounded-2xl border border-border bg-card p-4 text-sm">
+                <div
+                  key={act.id}
+                  className="rounded-2xl bg-card p-4 text-sm shadow-sm ring-1 ring-black/5"
+                >
                   <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
                     <span className="font-semibold text-foreground">{act.action_type}</span>
                     <span>{new Date(act.created_at).toLocaleString()}</span>
@@ -262,13 +269,13 @@ export function CustomerDrawer({
           )}
         </div>
 
-        <div className="space-y-3 border-t border-border bg-card p-5">
+        <div className="space-y-3 border-t border-border/70 bg-card/90 p-5 backdrop-blur-xl">
           <div className="flex gap-2">
             <select
               value={dispoOutcome}
               onChange={(e) => setDispoOutcome(e.target.value)}
               aria-label="Outcome"
-              className="h-10 rounded-full border border-input bg-card px-3 text-sm text-foreground"
+              className="h-10 rounded-full border border-input bg-background px-3 text-sm text-foreground"
             >
               <option value="CALLBACK">Callback</option>
               <option value="PAYMENT_PROMISED">Payment promised</option>
@@ -283,14 +290,14 @@ export function CustomerDrawer({
                 min={jhbDateOffset(0)}
                 onChange={(e) => setDispoDate(e.target.value)}
                 aria-label="Next action date"
-                className="h-10 rounded-full border border-input bg-card px-3 text-sm text-foreground"
+                className="h-10 rounded-full border border-input bg-background px-3 text-sm text-foreground"
               />
             )}
             <Input
               value={quickNote}
               onChange={(e) => setQuickNote(e.target.value)}
               placeholder="Add a note"
-              className="h-10 rounded-full bg-card px-4"
+              className="h-10 rounded-full bg-background px-4"
             />
             <Button
               onClick={handleLogNote}
