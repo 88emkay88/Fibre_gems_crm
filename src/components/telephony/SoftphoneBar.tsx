@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { PictureInPicture2, Check, ChevronDown, Phone } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import type { AgentTelephonyState } from "./types";
 import {
   formatCallTime,
@@ -106,16 +105,16 @@ export function SoftphoneBar({
 
   const statusDot =
     telephonyState.agentStatus === "in_call"
-      ? "bg-destructive"
+      ? "bg-[#D44B2E]"
       : telephonyState.agentStatus === "paused"
-        ? "bg-secondary"
-        : "bg-success";
+        ? "bg-[#F5B021]"
+        : "bg-[#22C55E]";
 
   const statusLabel =
     telephonyState.agentStatus === "in_call"
       ? "On call"
       : telephonyState.agentStatus === "dialing"
-        ? "Dialing"
+        ? "Dialing…"
         : telephonyState.agentStatus === "paused"
           ? `On break${telephonyState.pauseCode ? ` · ${telephonyState.pauseCode}` : ""}`
           : "Ready";
@@ -130,68 +129,65 @@ export function SoftphoneBar({
         />
       )}
 
-      <div className="fixed bottom-6 left-1/2 z-50 w-[calc(100%-2rem)] max-w-xl -translate-x-1/2">
-        <div className="flex flex-col gap-3 rounded-[28px] bg-card/85 p-3 shadow-[0_12px_40px_rgba(0,0,0,0.12)] ring-1 ring-black/5 backdrop-blur-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
+      <div className="fixed bottom-5 left-1/2 z-50 w-[calc(100%-2rem)] max-w-xl -translate-x-1/2 lg:left-[calc(50%+8rem)]">
+        <div className="flex flex-col gap-3 rounded-[20px] border border-white/10 bg-[#111111]/95 p-3 shadow-[0_20px_60px_rgba(0,0,0,0.6)] backdrop-blur-2xl">
+          {/* Status row */}
           <div className="flex items-center justify-between gap-3 px-1">
             <div className="flex min-w-0 items-center gap-2.5">
               <span
                 className={`size-2.5 shrink-0 rounded-full ${statusDot} ${isCallActive ? "animate-pulse" : ""}`}
               />
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-foreground">
+                <p className="truncate text-sm font-semibold text-white">
                   {isCallActive ? telephonyState.activeCustomerName || "Active lead" : statusLabel}
                 </p>
-                <p className="truncate text-xs text-muted-foreground">
+                <p className="truncate text-xs text-white/40">
                   {isCallActive
                     ? telephonyState.activeCustomerPhone || ""
-                    : "Choose Call on a lead to start"}
+                    : "Click Call on a lead to dial"}
                 </p>
               </div>
             </div>
 
             {isCallActive ? (
               <div className="flex items-center gap-2">
-                <span className="font-mono text-lg font-semibold tabular-nums text-foreground">
+                <span className="font-mono text-lg font-bold tabular-nums text-[#F5B021]">
                   {formatCallTime(telephonyState.callDurationSeconds)}
                 </span>
                 {callLayout === "dock" && (
-                  <Button
-                    variant="outline"
-                    size="icon"
+                  <button
                     onClick={() => setCallLayout("float")}
                     aria-label="Pop out call panel"
-                    className="size-8 rounded-full bg-card"
+                    className="grid size-8 place-items-center rounded-full border border-white/10 bg-white/5 text-white/60 transition hover:bg-white/10 hover:text-white"
                   >
                     <PictureInPicture2 className="size-4" />
-                  </Button>
+                  </button>
                 )}
               </div>
             ) : (
               <div className="relative">
-                <Button
-                  variant="outline"
-                  size="sm"
+                <button
                   onClick={() => setPauseMenuOpen((open) => !open)}
-                  className="h-8 rounded-full bg-card text-xs"
+                  className="flex h-8 items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 text-xs font-semibold text-white/60 transition hover:bg-white/10 hover:text-white"
                 >
                   {telephonyState.agentStatus === "paused" ? "Resume" : "Break"}
-                  <ChevronDown />
-                </Button>
+                  <ChevronDown className="size-3" />
+                </button>
                 {pauseMenuOpen && (
-                  <div className="absolute bottom-11 right-0 w-44 rounded-2xl border border-border bg-popover p-1.5 shadow-xl">
+                  <div className="absolute bottom-11 right-0 z-10 w-44 rounded-xl border border-white/10 bg-[#1a1a1a] p-1.5 shadow-2xl">
                     {telephonyState.agentStatus === "paused" ? (
                       <button
                         onClick={() => handleTogglePause()}
-                        className="w-full rounded-xl px-3 py-2 text-left text-xs font-semibold text-success hover:bg-muted"
+                        className="w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-[#22C55E] hover:bg-white/5"
                       >
-                        Back to ready
+                        Back to Ready
                       </button>
                     ) : (
                       PAUSE_CODES.map((code) => (
                         <button
                           key={code}
                           onClick={() => handleTogglePause(code)}
-                          className="w-full rounded-xl px-3 py-2 text-left text-xs text-foreground hover:bg-muted"
+                          className="w-full rounded-lg px-3 py-2 text-left text-xs text-white/70 hover:bg-white/5 hover:text-white"
                         >
                           {code}
                         </button>
@@ -208,7 +204,7 @@ export function SoftphoneBar({
           )}
 
           {isCallActive && callLayout === "float" && (
-            <p className="flex items-center justify-center gap-2 px-1 pb-1 text-xs text-muted-foreground">
+            <p className="flex items-center justify-center gap-2 px-1 pb-1 text-xs text-white/30">
               <Phone className="size-3.5" />
               Call controls are in the floating panel
             </p>
@@ -221,10 +217,10 @@ export function SoftphoneBar({
                 onChange={(e) => setSelectedDispo(e.target.value)}
                 disabled={!telephonyState.activeCustomerId}
                 aria-label="Outcome"
-                className="h-10 flex-1 rounded-full border border-input bg-card px-4 text-sm text-foreground disabled:opacity-50"
+                className="h-9 flex-1 rounded-full border border-white/10 bg-white/5 px-4 text-xs font-medium text-white disabled:opacity-30 focus:border-[#F5B021]/50 focus:outline-none"
               >
                 {DISPOSITIONS.map((d) => (
-                  <option key={d.value} value={d.value}>
+                  <option key={d.value} value={d.value} className="bg-[#1a1a1a] text-white">
                     {d.label}
                   </option>
                 ))}
@@ -237,17 +233,17 @@ export function SoftphoneBar({
                   onChange={(e) => setCallbackDate(e.target.value)}
                   aria-label="Next action date"
                   required
-                  className="h-10 rounded-full border border-input bg-card px-3 text-sm text-foreground"
+                  className="h-9 rounded-full border border-white/10 bg-white/5 px-3 text-xs text-white focus:border-[#F5B021]/50 focus:outline-none"
                 />
               )}
-              <Button
+              <button
                 onClick={handleSaveDisposition}
                 disabled={!telephonyState.activeCustomerId || isSaving}
-                className="h-10 gap-1.5 rounded-full px-5"
+                className="flex h-9 items-center gap-1.5 rounded-full bg-gradient-to-r from-[#D44B2E] to-[#F5B021] px-5 text-xs font-bold text-black shadow-lg shadow-[#F5B021]/20 transition hover:opacity-90 disabled:opacity-40"
               >
-                <Check />
-                Save and next
-              </Button>
+                <Check className="size-3.5" />
+                Save & Next
+              </button>
             </div>
           )}
         </div>

@@ -1,22 +1,106 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&display=swap');
 @import "tailwindcss" source(none);
 @source "../src";
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
-/*
- * Design system definition.
- *
- * The @theme inline block maps CSS custom properties to Tailwind utility
- * classes (e.g. --color-primary -> bg-primary, text-primary).
- *
- * The :root and .dark blocks define the actual color values using oklch.
- * All colors MUST use oklch format.
- *
- * To add a new semantic color:
- * 1. Add the variable to :root (light value) and .dark (dark value)
- * 2. Register it in @theme inline as --color-<name>: var(--<name>)
- */
+:root {
+  --font-montserrat: 'Montserrat', sans-serif;
+  --zen-font-family: var(--font-montserrat), sans-serif;
+  --font-heading: 'Montserrat', sans-serif;
+}
+
+/* Fibre Gems brand accents */
+:root,
+[data-theme="light"] {
+  --zen-primary: #D44B2E;
+  --zen-primary-fg: #FFFFFF;
+  --zen-focus: #F5B021;
+  --zen-surface: #FFFFFF;
+  --zen-surface-raised: #F3F1F1;
+  --zen-fg: #1A1A1A;
+
+  --radius: 0.75rem;
+  --background: #F3F1F1;
+  --foreground: #1A1A1A;
+  --card: #FFFFFF;
+  --card-foreground: #1A1A1A;
+  --popover: #FFFFFF;
+  --popover-foreground: #1A1A1A;
+  --primary: #D44B2E;
+  --primary-foreground: #FFFFFF;
+  --secondary: #EBE8E8;
+  --secondary-foreground: #1A1A1A;
+  --muted: #EBE8E8;
+  --muted-foreground: #6B7280;
+  --accent: #F5B021;
+  --accent-foreground: #000000;
+  --destructive: #D44B2E;
+  --destructive-foreground: #FFFFFF;
+  --success: #16A34A;
+  --success-foreground: #FFFFFF;
+  --warning: #F5B021;
+  --warning-foreground: #000000;
+  --border: #DCD8D8;
+  --input: #DCD8D8;
+  --ring: #D44B2E;
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #1A1A1A;
+  --sidebar-primary: #D44B2E;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #F3F1F1;
+  --sidebar-accent-foreground: #1A1A1A;
+  --sidebar-border: #DCD8D8;
+  --sidebar-ring: #D44B2E;
+  --sidebar-muted: #6B7280;
+  --brand-gradient: linear-gradient(135deg, #D44B2E 0%, #F5B021 100%);
+}
+
+[data-theme="dark"],
+.dark {
+  --zen-primary: #F5B021;
+  --zen-primary-fg: #000000;
+  --zen-focus: #D44B2E;
+  --zen-surface: #0a0a0a;
+  --zen-surface-raised: #141414;
+  --zen-fg: #EDEDED;
+
+  --radius: 0.75rem;
+  --background: #0a0a0a;
+  --foreground: #EDEDED;
+  --card: #141414;
+  --card-foreground: #EDEDED;
+  --popover: #141414;
+  --popover-foreground: #EDEDED;
+  --primary: #F5B021;
+  --primary-foreground: #000000;
+  --secondary: #1C1C1C;
+  --secondary-foreground: #EDEDED;
+  --muted: #1C1C1C;
+  --muted-foreground: #94A3B8;
+  --accent: #D44B2E;
+  --accent-foreground: #FFFFFF;
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+  --success: #22C55E;
+  --success-foreground: #000000;
+  --warning: #F5B021;
+  --warning-foreground: #000000;
+  --border: #262626;
+  --input: #262626;
+  --ring: #F5B021;
+  --sidebar: #0e0e0e;
+  --sidebar-foreground: #EDEDED;
+  --sidebar-primary: #F5B021;
+  --sidebar-primary-foreground: #000000;
+  --sidebar-accent: #1A1A1A;
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-border: #222222;
+  --sidebar-ring: #F5B021;
+  --sidebar-muted: #888888;
+  --brand-gradient: linear-gradient(135deg, #E07C2A 0%, #F5B021 100%);
+}
 
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
@@ -47,12 +131,6 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-ring-offset-background: var(--background);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -64,50 +142,50 @@
   --color-sidebar-muted: var(--sidebar-muted);
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-display: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-sans: 'Montserrat', sans-serif;
+  --font-display: 'Montserrat', sans-serif;
 }
 
-:root {
-  --radius: 0.75rem;
-  --background: oklch(0.975 0.002 260);
-  --foreground: oklch(0.2 0.01 260);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.2 0.01 260);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.2 0.01 260);
-  --primary: oklch(0.55 0.19 258);
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.955 0.003 260);
-  --secondary-foreground: oklch(0.2 0.01 260);
-  --muted: oklch(0.955 0.003 260);
-  --muted-foreground: oklch(0.5 0.01 260);
-  --accent: oklch(0.95 0.015 258);
-  --accent-foreground: oklch(0.25 0.02 258);
-  --destructive: oklch(0.58 0.21 25);
-  --destructive-foreground: oklch(1 0 0);
-  --success: oklch(0.55 0.14 155);
-  --success-foreground: oklch(1 0 0);
-  --warning: oklch(0.56 0.15 50);
-  --warning-foreground: oklch(1 0 0);
-  --border: oklch(0.92 0.003 260);
-  --input: oklch(0.89 0.004 260);
-  --ring: oklch(0.55 0.19 258);
-  --chart-1: oklch(0.8 0.16 78);
-  --chart-2: oklch(0.6 0.17 35);
-  --chart-3: oklch(0.68 0.15 55);
-  --chart-4: oklch(0.21 0 0);
-  --chart-5: oklch(0.63 0.16 45);
-  --sidebar: oklch(1 0 0);
-  --sidebar-foreground: oklch(0.2 0.01 260);
-  --sidebar-primary: oklch(0.55 0.19 258);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.955 0.003 260);
-  --sidebar-accent-foreground: oklch(0.2 0.01 260);
-  --sidebar-border: oklch(0.92 0.003 260);
-  --sidebar-ring: oklch(0.55 0.19 258);
-  --sidebar-muted: oklch(0.5 0.01 260);
-  --brand-gradient: linear-gradient(135deg, oklch(0.62 0.19 258), oklch(0.55 0.19 258));
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  letter-spacing: -0.01em;
+}
+
+html {
+  font-size: 100%;
+}
+
+html,
+body {
+  font-family: var(--zen-font-family), sans-serif;
+  color: var(--foreground);
+  background-color: var(--background);
+  width: 100%;
+  min-height: 100vh;
+}
+
+body {
+  font-size: 0.875rem;
+}
+
+/* Custom Scrollbars in FibreGems orange */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #E07C2A;
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #F5B021;
 }
 
 @layer base {

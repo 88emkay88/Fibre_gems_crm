@@ -292,7 +292,7 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
   const navigation =
     mode === "agent"
       ? [
-          { id: "kanban", label: "Pipeline Command (REMI)", icon: LayoutGrid },
+          { id: "kanban", label: "Pipeline Command", icon: LayoutGrid },
           { id: "callbacks", label: "Today's Call Backs", icon: Phone },
           { id: "worklist", label: "All Assigned Leads", icon: ClipboardList },
           { id: "newlead", label: "New Lead Capture", icon: Plus },
@@ -338,22 +338,22 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
         <Button
           variant="ghost"
           aria-label="Close menu"
-          className="fixed inset-0 z-30 h-full w-full rounded-none bg-background/70 lg:hidden"
+          className="fixed inset-0 z-30 h-full w-full rounded-none bg-black/60 backdrop-blur-sm lg:hidden"
           onClick={() => setMenu(false)}
         />
       )}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-border bg-sidebar/95 backdrop-blur-xl transition-transform lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-white/5 bg-[#0e0e0e] transition-transform lg:translate-x-0 ${
           menu ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex h-20 items-center justify-between border-b border-border px-6">
+        <div className="flex h-[68px] items-center justify-between border-b border-white/5 px-5">
           <div className="flex items-center gap-3">
-            <div className="grid size-10 place-items-center rounded bg-primary text-primary-foreground">
+            <div className="grid size-9 place-items-center rounded-lg bg-gradient-to-br from-[#E07C2A] to-[#F5B021] text-black shadow-lg shadow-[#F5B021]/20">
               <Shield className="size-5" />
             </div>
             <div>
-              <div className="font-semibold tracking-tight text-foreground">FibreGems</div>
+              <div className="text-sm font-bold tracking-wide text-white">FibreGems</div>
               <div className="text-[11px] font-medium text-muted-foreground">
                 {mode === "admin" ? "Command Centre" : "Agent Daily Workspace"}
               </div>
@@ -363,13 +363,13 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
             <X />
           </Button>
         </div>
-        <div className="border-b border-border p-5">
+        <div className="border-b border-white/5 px-4 py-3">
           <div className="flex items-center gap-3">
             <div className="grid size-10 shrink-0 place-items-center rounded-full bg-primary font-bold text-primary-foreground">
               {name.slice(0, 1).toUpperCase()}
             </div>
             <div className="min-w-0">
-              <div className="truncate text-sm font-semibold text-foreground">{name}</div>
+              <div className="truncate text-xs font-semibold text-white">{name}</div>
               <div className="text-xs text-muted-foreground">
                 {mode === "admin" ? "System Administrator" : "Sales Agent"}
               </div>
@@ -400,14 +400,14 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
             </Button>
           ))}
         </nav>
-        <div className="border-t border-border p-3">
+        <div className="border-t border-white/5 p-3">
           <Button variant="nav" className="w-full justify-start text-destructive" onClick={logout}>
             <LogOut /> Log out
           </Button>
         </div>
       </aside>
       <main className="min-h-screen lg:ml-64 pb-24">
-        <header className="sticky top-0 z-20 flex min-h-20 items-center justify-between gap-3 border-b border-border/70 bg-background/80 px-4 backdrop-blur-xl md:px-8">
+        <header className="sticky top-0 z-20 flex min-h-[68px] items-center justify-between gap-3 border-b border-white/5 bg-[#0a0a0a]/90 px-4 backdrop-blur-xl md:px-8">
           <div className="flex min-w-0 items-center gap-3">
             <Button
               variant="outline"
@@ -422,7 +422,7 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
               <p className="text-[11px] font-semibold uppercase text-primary">
                 {mode === "admin" ? "FibreGems / Administration" : `FibreGems / ${dateText(today)}`}
               </p>
-              <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{heading}</h1>
+              <h1 className="text-xl font-bold tracking-tight text-white">{heading}</h1>
             </div>
           </div>
           <div className="flex gap-2">
@@ -443,7 +443,7 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
             )}
           </div>
         </header>
-        <div className="mx-auto max-w-[1600px] space-y-6 p-4 md:p-8">
+        <div className="mx-auto max-w-[1600px] space-y-6 p-4 md:p-8 text-white">
           {workspaceQ.isError ? (
             <div className="border border-destructive p-4 text-destructive">
               Unable to load CRM data.{" "}
@@ -634,26 +634,26 @@ function AgentStats({
           return (
             <div
               key={String(label)}
-              className="border border-border bg-card p-5 transition-colors hover:border-primary/50"
+              className="rounded-xl border border-white/5 bg-[#141414] p-5 transition hover:border-white/10"
             >
-              <div className="flex justify-between text-sm text-muted-foreground">
+              <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-white/30">
                 <span>{label as string}</span>
-                <IconComponent className="size-4 text-primary" />
+                <IconComponent className="size-4 text-[#F5B021]/50" />
               </div>
-              <div className="mt-5 text-3xl font-bold">{value as number}</div>
+              <div className="mt-4 text-3xl font-bold text-white">{value as number}</div>
             </div>
           );
         })}
       </div>
       <div className="mt-5 flex items-center gap-4 text-xs text-muted-foreground">
-        <span>Call completion</span>
-        <div className="h-1.5 flex-1 bg-muted">
+        <span className="text-white/30">Call completion</span>
+        <div className="h-1.5 flex-1 rounded-full bg-white/5">
           <div
-            className="h-full bg-primary transition-all duration-500"
+            className="h-full rounded-full bg-gradient-to-r from-[#D44B2E] to-[#F5B021] transition-all duration-700"
             style={{ width: `${scheduled ? (done / scheduled) * 100 : 0}%` }}
           />
         </div>
-        <span>{scheduled ? Math.round((done / scheduled) * 100) : 0}%</span>
+        <span className="text-white/30">{scheduled ? Math.round((done / scheduled) * 100) : 0}%</span>
       </div>
     </section>
   );

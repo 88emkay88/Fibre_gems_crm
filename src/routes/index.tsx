@@ -77,24 +77,24 @@ function SignIn() {
 
   return (
     <main className="grid min-h-screen lg:grid-cols-2">
-      <section className="relative hidden flex-col justify-between bg-sidebar p-12 text-sidebar-foreground lg:flex">
+      <section className="relative hidden flex-col justify-between bg-[#0a0a0a] p-12 lg:flex" style={{backgroundImage: 'radial-gradient(ellipse at 20% 80%, rgba(212,75,46,0.15) 0%, transparent 60%), radial-gradient(ellipse at 80% 20%, rgba(245,176,33,0.1) 0%, transparent 60%)'}}>
         <div className="flex items-center gap-3">
-          <div className="size-10 rounded-lg bg-primary" />
-          <span className="text-xl font-extrabold">FibreGems</span>
+          <div className="size-10 rounded-lg bg-gradient-to-br from-[#E07C2A] to-[#F5B021]" />
+          <span className="text-xl font-bold text-white tracking-tight">FibreGems</span>
         </div>
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">PostgreSQL Connected CRM</p>
-          <h1 className="mt-4 max-w-md text-4xl font-extrabold leading-tight">Every lead, order and activation in one place.</h1>
-          <p className="mt-4 max-w-md text-sidebar-muted">Capture customers in the field, track payments, and keep your team's next actions on schedule without external vendor locks.</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#F5B021]/70">PostgreSQL Connected CRM</p>
+          <h1 className="mt-4 max-w-md text-4xl font-extrabold leading-tight text-white">Every lead, order and activation in one place.</h1>
+          <p className="mt-4 max-w-md text-white/40">Capture customers in the field, track payments, and keep your team's next actions on schedule without external vendor locks.</p>
         </div>
-        <div className="h-1.5 w-32 rounded-full bg-primary" />
+        <div className="h-1 w-32 rounded-full bg-gradient-to-r from-[#D44B2E] to-[#F5B021]" />
       </section>
-      <section className="flex items-center justify-center p-6">
-        <div className="w-full max-w-sm">
-          <h2 className="text-2xl font-extrabold">
+      <section className="flex items-center justify-center bg-[#0e0e0e] p-6">
+        <div className="w-full max-w-sm rounded-2xl border border-white/5 bg-[#141414] p-8">
+          <h2 className="text-2xl font-bold text-white">
             {mode === "signin" ? "Sign in" : mode === "signup" ? "Create account" : "Reset password"}
           </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 text-sm text-white/40">
             {mode === "signin" ? "Welcome back to the command centre." : mode === "signup" ? "New accounts start as agents." : "We'll send you reset instructions."}
           </p>
           <form onSubmit={submit} className="mt-6 space-y-4">
@@ -114,16 +114,16 @@ function SignIn() {
                 <Input id="password" name="password" type="password" minLength={6} required autoComplete={mode === "signup" ? "new-password" : "current-password"} className="mt-1" />
               </div>
             )}
-            {error && <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
-            {notice && <p className="rounded-md bg-accent p-3 text-sm text-accent-foreground">{notice}</p>}
+            {error && <p className="rounded-lg bg-[#D44B2E]/10 p-3 text-sm text-[#D44B2E] border border-[#D44B2E]/20">{error}</p>}
+            {notice && <p className="rounded-lg bg-[#F5B021]/10 p-3 text-sm text-[#F5B021] border border-[#F5B021]/20">{notice}</p>}
             <Button type="submit" className="w-full" disabled={busy}>
               {busy ? "Please wait…" : mode === "signin" ? "Sign in" : mode === "signup" ? "Create account" : "Send reset instructions"}
             </Button>
           </form>
 
           {mode === "signin" && (
-            <div className="mt-4 rounded-lg border border-border bg-card p-3 text-xs">
-              <p className="font-semibold text-muted-foreground">Quick Demo Credentials:</p>
+            <div className="mt-4 rounded-xl border border-white/5 bg-white/[0.03] p-3 text-xs">
+              <p className="font-bold uppercase tracking-wider text-white/30 text-[10px]">Quick Demo Credentials:</p>
               <div className="mt-2 flex gap-2">
                 <Button variant="outline" size="sm" type="button" onClick={() => fillDemo("admin@fibregems.co.za")}>
                   Admin Demo
@@ -138,11 +138,11 @@ function SignIn() {
           <div className="mt-6 flex justify-between text-sm">
             {mode === "signin" ? (
               <>
-                <button className="text-primary hover:underline" onClick={() => setMode("signup")}>Create account</button>
-                <button className="text-muted-foreground hover:underline" onClick={() => setMode("reset")}>Forgot password?</button>
+                <button className="text-[#F5B021] hover:text-[#F5B021]/80 text-sm font-medium transition" onClick={() => setMode("signup")}>Create account</button>
+                <button className="text-white/30 hover:text-white/60 text-sm transition" onClick={() => setMode("reset")}>Forgot password?</button>
               </>
             ) : (
-              <button className="text-primary hover:underline" onClick={() => setMode("signin")}>Back to sign in</button>
+              <button className="text-[#F5B021] hover:text-[#F5B021]/80 text-sm font-medium transition" onClick={() => setMode("signin")}>Back to sign in</button>
             )}
           </div>
         </div>

@@ -1,5 +1,4 @@
 import { CalendarDays, CheckCircle2, Clock3, Activity, Plus, RefreshCw } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 interface TopMetricsBarProps {
   scheduledToday: number;
@@ -24,64 +23,90 @@ export function TopMetricsBar({
 }: TopMetricsBarProps) {
   const stats = [
     {
-      label: "Scheduled today",
+      label: "Scheduled",
       value: scheduledToday,
       icon: CalendarDays,
-      tone: "text-foreground",
+      accent: "text-white",
+      bar: null,
     },
-    { label: "Completed", value: completedToday, icon: CheckCircle2, tone: "text-success" },
-    { label: "Remaining", value: remainingCalls, icon: Clock3, tone: "text-secondary-foreground" },
-    { label: "Touches logged", value: totalTouches, icon: Activity, tone: "text-foreground" },
+    {
+      label: "Completed",
+      value: completedToday,
+      icon: CheckCircle2,
+      accent: "text-[#22C55E]",
+      bar: null,
+    },
+    {
+      label: "Remaining",
+      value: remainingCalls,
+      icon: Clock3,
+      accent: remainingCalls > 0 ? "text-[#F5B021]" : "text-white/60",
+      bar: null,
+    },
+    {
+      label: "Touches",
+      value: totalTouches,
+      icon: Activity,
+      accent: "text-white",
+      bar: null,
+    },
   ];
 
   return (
     <div className="space-y-4">
+      {/* Row top */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span className="size-2 rounded-full bg-success" />
-          <span>Live queue</span>
+        <div className="flex items-center gap-2">
+          <span className="size-2 rounded-full bg-[#22C55E] animate-pulse" />
+          <span className="text-xs font-semibold uppercase tracking-widest text-white/40">Live Queue</span>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
+          <button
             onClick={onRefresh}
             disabled={isRefreshing}
-            className="rounded-full bg-card"
+            className="flex h-8 items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 text-xs font-semibold text-white/60 transition hover:bg-white/10 hover:text-white disabled:opacity-50"
           >
-            <RefreshCw className={isRefreshing ? "animate-spin" : ""} />
+            <RefreshCw className={`size-3 ${isRefreshing ? "animate-spin" : ""}`} />
             Sync
-          </Button>
-          <Button size="sm" onClick={onQuickLead} className="rounded-full">
-            <Plus />
-            Quick lead
-          </Button>
+          </button>
+          <button
+            onClick={onQuickLead}
+            className="flex h-8 items-center gap-2 rounded-full bg-gradient-to-r from-[#D44B2E] to-[#F5B021] px-4 text-xs font-bold text-black shadow-lg shadow-[#F5B021]/20 transition hover:opacity-90"
+          >
+            <Plus className="size-3" />
+            Quick Lead
+          </button>
         </div>
       </div>
 
+      {/* Stat cards */}
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
-        {stats.map(({ label, value, icon: Icon, tone }) => (
+        {stats.map(({ label, value, icon: Icon, accent }) => (
           <div
             key={label}
-            className="rounded-2xl border border-border bg-card p-4 shadow-sm transition-shadow hover:shadow-md"
+            className="rounded-2xl border border-white/5 bg-[#141414] p-4 shadow-sm transition hover:border-white/10"
           >
-            <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
-              <span>{label}</span>
-              <Icon className="size-4" />
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-white/30">{label}</span>
+              <Icon className="size-4 text-white/20" />
             </div>
-            <p className={`mt-2 text-2xl font-semibold tabular-nums ${tone}`}>{value}</p>
+            <p className={`mt-2 text-3xl font-bold tabular-nums ${accent}`}>{value}</p>
           </div>
         ))}
-        <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-          <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
-            <span>Completion</span>
-            <span>Target 80%</span>
+
+        {/* Completion card with progress bar */}
+        <div className="rounded-2xl border border-white/5 bg-[#141414] p-4 shadow-sm transition hover:border-white/10">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-white/30">Completion</span>
+            <span className="text-[10px] font-bold text-white/20">Target 80%</span>
           </div>
-          <p className="mt-2 text-2xl font-semibold tabular-nums">{completionRate}%</p>
-          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+          <p className={`mt-2 text-3xl font-bold tabular-nums ${completionRate >= 80 ? "text-[#22C55E]" : "text-[#F5B021]"}`}>
+            {completionRate}%
+          </p>
+          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/5">
             <div
-              className={`h-full rounded-full transition-all duration-500 ${
-                completionRate >= 80 ? "bg-success" : "bg-secondary"
+              className={`h-full rounded-full transition-all duration-700 ${
+                completionRate >= 80 ? "bg-[#22C55E]" : "bg-gradient-to-r from-[#D44B2E] to-[#F5B021]"
               }`}
               style={{ width: `${Math.min(completionRate, 100)}%` }}
             />
