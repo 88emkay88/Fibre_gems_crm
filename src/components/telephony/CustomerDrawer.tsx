@@ -1,27 +1,28 @@
-import React, { useState } from "react";
+import { useState, type ElementType, type ReactNode } from "react";
 import {
-  X,
-  Phone,
-  Mail,
-  MapPin,
-  Calendar,
+  PhoneCall,
   CreditCard,
   RefreshCw,
   AlertTriangle,
-  History,
-  FileText,
   User,
-  CheckCircle,
-  Play,
+  Package,
+  ClipboardList,
 } from "lucide-react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import type { Customer, ActivityRow } from "./types";
 import { reissueEasyPayApi, escalateLeadApi, submitDispositionApi } from "./telephony-service";
+
+const ESCALATION_LEVELS = ["Level 2 - Supervisor Alert", "Level 3 - Operations Escalation"];
 
 interface CustomerDrawerProps {
   customer: Customer | null;
@@ -30,6 +31,45 @@ interface CustomerDrawerProps {
   onClose: () => void;
   onCall: (customer: Customer) => void;
   onRefreshData: () => void;
+}
+
+function Detail({
+  label,
+  value,
+  mono = false,
+}: {
+  label: string;
+  value?: string | null | undefined;
+  mono?: boolean;
+}) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className={`mt-0.5 truncate text-sm text-foreground ${mono ? "font-mono" : ""}`}>
+        {value || "—"}
+      </dd>
+    </div>
+  );
+}
+
+function Panel({
+  title,
+  icon: Icon,
+  children,
+}: {
+  title: string;
+  icon: ElementType;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-2xl border border-border bg-card p-5">
+      <h4 className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground">
+        <Icon className="size-4 text-muted-foreground" />
+        {title}
+      </h4>
+      {children}
+    </section>
+  );
 }
 
 export function CustomerDrawer({
@@ -44,13 +84,14 @@ export function CustomerDrawer({
   const [quickNote, setQuickNote] = useState("");
   const [dispoOutcome, setDispoOutcome] = useState("CALLBACK");
   const [escalateOpen, setEscalateOpen] = useState(false);
-  const [escalateLevel, setEscalateLevel] = useState("Level 2 - Supervisor Alert");
+  const [escalateLevel, setEscalateLevel] = useState(ESCALATION_LEVELS[0] ?? "");
   const [escalateReason, setEscalateReason] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!customer) return null;
 
   const customerActivities = activities.filter((a) => a.customer_id === customer.id);
+  const name = customer.full_name || `${customer.first_name} ${customer.surname}`;
 
   const handleReissueEP = async () => {
     setIsSubmitting(true);
@@ -59,8 +100,7 @@ export function CustomerDrawer({
     onRefreshData();
   };
 
-  const handleEscalate = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleEscalate = async () => {
     if (!escalateReason.trim()) return;
     setIsSubmitting(true);
     await escalateLeadApi(customer.id, escalateLevel, escalateReason);
@@ -85,260 +125,205 @@ export function CustomerDrawer({
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent side="right" className="w-full sm:max-w-xl border-l border-slate-800 bg-slate-950 p-0 text-slate-100 flex flex-col h-full">
-        {/* Drawer Header */}
-        <div className="border-b border-slate-800 p-6 bg-slate-900/40">
-          <div className="flex items-start justify-between">
-            <div className="min-w-0">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-primary">
-                {customer.external_customer_id || `ID: ${customer.id.slice(0, 8)}`}
-              </span>
-              <SheetTitle className="text-xl font-bold text-white truncate">
-                {customer.full_name || `${customer.first_name} ${customer.surname}`}
+      <SheetContent
+        side="right"
+        className="flex h-full w-full flex-col gap-0 border-l border-border bg-background p-0 sm:max-w-xl"
+      >
+        <SheetHeader className="space-y-3 border-b border-border bg-card p-6 text-left">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0 space-y-1">
+              <SheetTitle className="truncate text-xl font-semibold text-foreground">
+                {name}
               </SheetTitle>
-              <SheetDescription className="text-xs text-slate-400 mt-0.5">
-                {customer.area_suburb || "Area not specified"} · Created {customer.created_at.slice(0, 10)}
+              <SheetDescription className="text-sm text-muted-foreground">
+                {customer.area_suburb || "Area not set"} · Added {customer.created_at.slice(0, 10)}
               </SheetDescription>
             </div>
-
             <Button
               size="sm"
               onClick={() => onCall(customer)}
-              className="gap-1.5 rounded-lg bg-emerald-600 px-3 font-semibold text-white hover:bg-emerald-500"
+              className="shrink-0 gap-1.5 rounded-full px-4"
             >
-              <Phone className="size-3.5" />
-              Call Client
+              <PhoneCall />
+              Call
             </Button>
           </div>
 
-          {/* Tabs Navigation */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-5">
-            <TabsList className="grid w-full grid-cols-3 bg-slate-900 p-1 border border-slate-800">
-              <TabsTrigger value="overview" className="text-xs data-[state=active]:bg-slate-800 data-[state=active]:text-white">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid w-full grid-cols-3 rounded-full bg-muted p-1">
+              <TabsTrigger value="overview" className="rounded-full text-xs">
                 Overview
               </TabsTrigger>
-              <TabsTrigger value="financial" className="text-xs data-[state=active]:bg-slate-800 data-[state=active]:text-white">
-                Orders & EP
+              <TabsTrigger value="financial" className="rounded-full text-xs">
+                Orders & EasyPay
               </TabsTrigger>
-              <TabsTrigger value="history" className="text-xs data-[state=active]:bg-slate-800 data-[state=active]:text-white">
+              <TabsTrigger value="history" className="rounded-full text-xs">
                 Timeline ({customerActivities.length})
               </TabsTrigger>
             </TabsList>
           </Tabs>
-        </div>
+        </SheetHeader>
 
-        {/* Drawer Body Scroll Area */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 space-y-4 overflow-y-auto p-6">
           {activeTab === "overview" && (
-            <div className="space-y-4">
-              {/* Contact Information */}
-              <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                  <User className="size-3.5 text-primary" /> Contact Details
-                </h4>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <span className="text-[11px] text-slate-500">Primary Cell</span>
-                    <p className="font-mono font-medium text-slate-200">{customer.cell_number}</p>
-                  </div>
-                  <div>
-                    <span className="text-[11px] text-slate-500">Alternate Phone</span>
-                    <p className="font-mono font-medium text-slate-200">{customer.alternate_cell_number || "—"}</p>
+            <>
+              <Panel title="Contact" icon={User}>
+                <dl className="grid grid-cols-2 gap-4">
+                  <Detail label="Primary cell" value={customer.cell_number} mono />
+                  <Detail label="Alternate phone" value={customer.alternate_cell_number} mono />
+                  <div className="col-span-2">
+                    <Detail label="Email" value={customer.email || "No email on record"} />
                   </div>
                   <div className="col-span-2">
-                    <span className="text-[11px] text-slate-500">Email Address</span>
-                    <p className="font-medium text-slate-200">{customer.email || "No email on record"}</p>
+                    <Detail label="Street address" value={customer.full_address} />
                   </div>
-                  <div className="col-span-2">
-                    <span className="text-[11px] text-slate-500">Physical Street Address</span>
-                    <p className="font-medium text-slate-200">{customer.full_address || "—"}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Service & Product Configuration */}
-              <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                  <FileText className="size-3.5 text-blue-400" /> Package & Billing
-                </h4>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <span className="text-[11px] text-slate-500">Product Package</span>
-                    <p className="font-semibold text-slate-200">{customer.product_package || "Not selected"}</p>
-                  </div>
-                  <div>
-                    <span className="text-[11px] text-slate-500">Payment Type</span>
-                    <p className="font-semibold text-slate-200">{customer.payment_type || "Prepaid"}</p>
-                  </div>
-                  <div>
-                    <span className="text-[11px] text-slate-500">Pipeline Stage</span>
-                    <p className="capitalize font-semibold text-primary">{customer.status.replace("_", " ")}</p>
-                  </div>
-                  <div>
-                    <span className="text-[11px] text-slate-500">Next Action</span>
-                    <p className="text-slate-200">{customer.next_action || "None scheduled"}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+                </dl>
+              </Panel>
+              <Panel title="Package" icon={Package}>
+                <dl className="grid grid-cols-2 gap-4">
+                  <Detail label="Product" value={customer.product_package || "Not selected"} />
+                  <Detail label="Payment type" value={customer.payment_type || "Prepaid"} />
+                  <Detail label="Next action" value={customer.next_action || "None scheduled"} />
+                  <Detail label="Area" value={customer.area_suburb} />
+                </dl>
+              </Panel>
+            </>
           )}
 
           {activeTab === "financial" && (
-            <div className="space-y-4">
-              {/* EasyPay Card */}
-              <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                    <CreditCard className="size-3.5 text-emerald-400" /> EasyPay Lifecycle
-                  </h4>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleReissueEP}
-                    disabled={isSubmitting}
-                    className="h-7 text-xs border-slate-700 bg-slate-800 hover:bg-slate-700"
-                  >
-                    <RefreshCw className="mr-1 size-3" /> Re-issue (+14d)
-                  </Button>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <span className="text-[11px] text-slate-500">EasyPay Number</span>
-                    <p className="font-mono text-base font-bold text-blue-400">{customer.easypay_number || "Not assigned"}</p>
-                  </div>
-                  <div>
-                    <span className="text-[11px] text-slate-500">Active Cycle</span>
-                    <p className="font-semibold text-slate-200">{customer.easypay_cycle || "Cycle 1 of 3"}</p>
-                  </div>
-                  <div>
-                    <span className="text-[11px] text-slate-500">Expiry Date</span>
-                    <p className="font-mono font-medium text-slate-200">{customer.easypay_expiry_date || "—"}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* SADV / Order References */}
-              <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">ISP Order Reference</h4>
-                <div className="text-sm">
-                  <span className="text-[11px] text-slate-500">OVR / OVK Reference</span>
-                  <p className="font-mono font-medium text-slate-200">{customer.order_number || "Awaiting Order Submission"}</p>
-                </div>
-              </div>
-            </div>
+            <>
+              <Panel title="EasyPay" icon={CreditCard}>
+                <dl className="mb-5 grid grid-cols-2 gap-4">
+                  <Detail
+                    label="EasyPay number"
+                    value={customer.easypay_number || "Not assigned"}
+                    mono
+                  />
+                  <Detail label="Cycle" value={customer.easypay_cycle} />
+                  <Detail label="Expiry date" value={customer.easypay_expiry_date} mono />
+                  <Detail
+                    label="Order reference"
+                    value={customer.order_number || "Awaiting submission"}
+                    mono
+                  />
+                </dl>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleReissueEP}
+                  disabled={isSubmitting}
+                  className="rounded-full"
+                >
+                  <RefreshCw />
+                  Re-issue EasyPay (+14 days)
+                </Button>
+              </Panel>
+            </>
           )}
 
           {activeTab === "history" && (
-            <div className="space-y-3">
+            <section className="space-y-3">
               {customerActivities.map((act) => (
-                <div key={act.id} className="rounded-xl border border-slate-800/80 bg-slate-900/40 p-3.5 text-xs space-y-1.5">
-                  <div className="flex items-center justify-between text-slate-400">
-                    <span className="font-semibold text-slate-200">{act.action_type}</span>
+                <div key={act.id} className="rounded-2xl border border-border bg-card p-4 text-sm">
+                  <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                    <span className="font-semibold text-foreground">{act.action_type}</span>
                     <span>{new Date(act.created_at).toLocaleString()}</span>
                   </div>
                   {act.outcome && (
-                    <div className="flex items-center gap-1.5">
-                      <Badge variant="outline" className="border-slate-700 text-slate-300">
-                        {act.outcome}
-                      </Badge>
+                    <div className="mt-2 flex items-center gap-2">
+                      <Badge variant="outline">{act.outcome}</Badge>
                       {act.customer_status_after && (
-                        <span className="text-[10px] text-slate-500">→ {act.customer_status_after}</span>
+                        <span className="text-xs text-muted-foreground">
+                          to {act.customer_status_after.replace(/_/g, " ")}
+                        </span>
                       )}
                     </div>
                   )}
-                  {act.notes && <p className="text-slate-300 italic">{act.notes}</p>}
-
-                  {/* ViciDial Audio Recording link if available */}
+                  {act.notes && <p className="mt-2 text-muted-foreground">{act.notes}</p>}
                   {act.recording_url && (
-                    <div className="mt-2 pt-2 border-t border-slate-800">
-                      <audio controls className="w-full h-8" src={act.recording_url} />
-                      <span className="text-[10px] text-slate-500">🎧 ViciDial Stereo Call Recording</span>
-                    </div>
+                    <audio controls className="mt-3 h-8 w-full" src={act.recording_url} />
                   )}
                 </div>
               ))}
-
               {customerActivities.length === 0 && (
-                <div className="py-12 text-center text-xs text-slate-500">No activity logs recorded yet.</div>
+                <div className="grid place-items-center rounded-2xl border border-dashed border-border py-12 text-sm text-muted-foreground">
+                  No activity recorded yet
+                </div>
               )}
-            </div>
+            </section>
           )}
         </div>
 
-        {/* Sticky Action Footer */}
-        <div className="border-t border-slate-800 p-4 bg-slate-900/80 space-y-3">
+        <div className="space-y-3 border-t border-border bg-card p-5">
           <div className="flex gap-2">
             <select
               value={dispoOutcome}
               onChange={(e) => setDispoOutcome(e.target.value)}
-              className="h-9 rounded-md border border-slate-700 bg-slate-800 px-2.5 text-xs font-semibold text-slate-200 focus:outline-none"
+              aria-label="Outcome"
+              className="h-10 rounded-full border border-input bg-card px-3 text-sm text-foreground"
             >
               <option value="CALLBACK">Callback</option>
-              <option value="PAYMENT_PROMISED">Payment Promised</option>
-              <option value="SALE">Sale Won</option>
-              <option value="NI">Not Interested</option>
-              <option value="DNC">Do Not Call</option>
+              <option value="PAYMENT_PROMISED">Payment promised</option>
+              <option value="SALE">Sale won</option>
+              <option value="NI">Not interested</option>
+              <option value="DNC">Do not call</option>
             </select>
             <Input
               value={quickNote}
               onChange={(e) => setQuickNote(e.target.value)}
-              placeholder="Add call note or action reason..."
-              className="h-9 bg-slate-800/80 border-slate-700 text-xs"
+              placeholder="Add a note"
+              className="h-10 rounded-full bg-card px-4"
             />
             <Button
-              size="sm"
               onClick={handleLogNote}
               disabled={isSubmitting || !quickNote.trim()}
-              className="bg-primary text-xs font-semibold"
+              className="h-10 rounded-full px-4"
             >
               Log
             </Button>
           </div>
 
-          <div className="flex items-center justify-between pt-1">
+          <div className="flex items-center justify-between">
             <Button
-              variant="destructive"
+              variant="ghost"
               size="sm"
-              onClick={() => setEscalateOpen(true)}
-              className="text-xs h-7 gap-1"
+              onClick={() => setEscalateOpen((open) => !open)}
+              className="gap-1.5 text-destructive hover:text-destructive"
             >
-              <AlertTriangle className="size-3" /> Raise Escalation
+              <AlertTriangle />
+              Raise escalation
             </Button>
-            <span className="text-[11px] text-slate-400 font-mono">Agent: Active</span>
           </div>
 
-          {/* Escalation Modal */}
           {escalateOpen && (
-            <div className="rounded-lg border border-rose-500/30 bg-rose-950/30 p-3 space-y-2.5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-rose-300">Escalate Lead</span>
-                <button onClick={() => setEscalateOpen(false)} className="text-slate-400 hover:text-white">
-                  <X className="size-3.5" />
-                </button>
-              </div>
+            <div className="space-y-2.5 rounded-2xl border border-destructive/30 bg-destructive/5 p-4">
               <select
                 value={escalateLevel}
                 onChange={(e) => setEscalateLevel(e.target.value)}
-                className="w-full h-8 rounded border border-slate-700 bg-slate-800 px-2 text-xs text-slate-200"
+                aria-label="Escalation level"
+                className="h-9 w-full rounded-full border border-input bg-card px-3 text-sm text-foreground"
               >
-                <option value="Level 2 - Supervisor Alert">Level 2 - Supervisor Alert</option>
-                <option value="Level 3 - Operations Escalation">Level 3 - Operations Escalation</option>
+                {ESCALATION_LEVELS.map((level) => (
+                  <option key={level} value={level}>
+                    {level}
+                  </option>
+                ))}
               </select>
               <Input
                 value={escalateReason}
                 onChange={(e) => setEscalateReason(e.target.value)}
-                placeholder="Reason for escalation..."
-                className="h-8 text-xs bg-slate-800 border-slate-700"
+                placeholder="Reason for escalation"
+                className="h-9 rounded-full bg-card px-4"
               />
               <Button
-                size="sm"
                 variant="destructive"
+                size="sm"
                 onClick={handleEscalate}
                 disabled={isSubmitting || !escalateReason.trim()}
-                className="w-full h-7 text-xs"
+                className="w-full rounded-full"
               >
-                Confirm Escalation
+                <ClipboardList />
+                Confirm escalation
               </Button>
             </div>
           )}
@@ -347,4 +332,3 @@ export function CustomerDrawer({
     </Sheet>
   );
 }
-

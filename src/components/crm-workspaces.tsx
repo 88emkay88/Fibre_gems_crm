@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
@@ -210,11 +210,6 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
     refresh();
   };
 
-  useEffect(() => {
-    document.documentElement.classList.add("dark");
-    return () => document.documentElement.classList.remove("dark");
-  }, []);
-
   const me = useQuery({
     queryKey: ["crm-me"],
     queryFn: async () => {
@@ -289,7 +284,7 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
           agents: "Manage Agents",
         } as Record<string, string>)[view]
       : view === "kanban"
-      ? "REMI Agent Telephony & Pipeline Command"
+      ? "Pipeline"
       : "Daily Execution Command";
 
   async function logout() {

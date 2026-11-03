@@ -8,50 +8,44 @@ export type ColumnDef = {
   title: string;
   statuses: string[];
   icon: React.ElementType;
-  color: string;
-  headerBorder: string;
+  accent: string;
 };
 
 export const KANBAN_COLUMNS: ColumnDef[] = [
   {
     id: "new_lead",
-    title: "New Leads",
+    title: "New leads",
     statuses: ["new_lead"],
     icon: Sparkles,
-    color: "text-blue-400 bg-blue-500/10",
-    headerBorder: "border-blue-500/30",
+    accent: "bg-primary",
   },
   {
     id: "contacted",
-    title: "Initial Contact",
+    title: "Initial contact",
     statuses: ["contacted", "qualified"],
     icon: Phone,
-    color: "text-purple-400 bg-purple-500/10",
-    headerBorder: "border-purple-500/30",
+    accent: "bg-primary",
   },
   {
     id: "payment_pending",
-    title: "Payment Promised",
+    title: "Payment promised",
     statuses: ["payment_pending"],
     icon: CreditCard,
-    color: "text-amber-400 bg-amber-500/10",
-    headerBorder: "border-amber-500/30",
+    accent: "bg-secondary",
   },
   {
     id: "order_submitted",
-    title: "Order Completed",
+    title: "Order completed",
     statuses: ["order_submitted", "activation_pending", "activated"],
     icon: CheckCircle2,
-    color: "text-emerald-400 bg-emerald-500/10",
-    headerBorder: "border-emerald-500/30",
+    accent: "bg-success",
   },
   {
     id: "lost",
-    title: "Escalated / Review",
+    title: "Escalated / review",
     statuses: ["lost"],
     icon: AlertOctagon,
-    color: "text-rose-400 bg-rose-500/10",
-    headerBorder: "border-rose-500/30",
+    accent: "bg-destructive",
   },
 ];
 
@@ -72,28 +66,25 @@ export function PipelineBoard({
 }: PipelineBoardProps) {
   const [dragOverColumn, setDragOverColumn] = React.useState<string | null>(null);
 
-  const getColumnCustomers = (col: ColumnDef) => {
-    return customers.filter((c) => col.statuses.includes(c.status));
-  };
-
   const handleDrop = (e: React.DragEvent, col: ColumnDef) => {
     e.preventDefault();
     setDragOverColumn(null);
     const customerId = e.dataTransfer.getData("text/plain");
-    if (customerId) {
-      onMoveCustomer(customerId, col.statuses[0]);
+    const targetStatus = col.statuses[0];
+    if (customerId && targetStatus) {
+      onMoveCustomer(customerId, targetStatus);
     }
   };
 
   return (
-    <div className="flex gap-4 overflow-x-auto pb-6 pt-2 select-none">
+    <div className="-mx-4 flex snap-x gap-4 overflow-x-auto px-4 pb-4 md:-mx-8 md:px-8">
       {KANBAN_COLUMNS.map((col) => {
-        const colCustomers = getColumnCustomers(col);
+        const colCustomers = customers.filter((c) => col.statuses.includes(c.status));
         const Icon = col.icon;
         const isOver = dragOverColumn === col.id;
 
         return (
-          <div
+          <section
             key={col.id}
             onDragOver={(e) => {
               e.preventDefault();
@@ -101,25 +92,22 @@ export function PipelineBoard({
             }}
             onDragLeave={() => setDragOverColumn(null)}
             onDrop={(e) => handleDrop(e, col)}
-            className={`flex flex-col w-[310px] shrink-0 rounded-2xl border bg-slate-950/60 p-3 transition-colors ${
-              isOver ? "border-primary/60 bg-slate-900/40" : "border-slate-800/80"
+            className={`flex w-[300px] shrink-0 snap-start flex-col rounded-3xl border p-3 transition-colors duration-200 ${
+              isOver ? "border-primary bg-accent/60" : "border-border bg-muted/50"
             }`}
           >
-            {/* Column Header */}
-            <div className={`flex items-center justify-between border-b pb-3 mb-3 ${col.headerBorder}`}>
-              <div className="flex items-center gap-2">
-                <div className={`grid size-7 place-items-center rounded-lg ${col.color}`}>
-                  <Icon className="size-4" />
-                </div>
-                <h3 className="font-semibold text-sm text-slate-200">{col.title}</h3>
+            <header className="mb-3 flex items-center justify-between px-1">
+              <div className="flex items-center gap-2.5">
+                <span className={`h-5 w-1 rounded-full ${col.accent}`} />
+                <Icon className="size-4 text-muted-foreground" />
+                <h3 className="text-sm font-semibold text-foreground">{col.title}</h3>
               </div>
-              <span className="grid size-6 place-items-center rounded-full bg-slate-800 text-xs font-bold text-slate-300">
+              <span className="rounded-full bg-card px-2 py-0.5 text-xs font-semibold tabular-nums text-muted-foreground shadow-sm">
                 {colCustomers.length}
               </span>
-            </div>
+            </header>
 
-            {/* Cards List */}
-            <div className="flex-1 space-y-3 overflow-y-auto max-h-[calc(100vh-270px)] pr-1">
+            <div className="flex max-h-[calc(100vh-360px)] min-h-32 flex-col gap-2.5 overflow-y-auto pr-1">
               {colCustomers.map((cust) => (
                 <LeadCard
                   key={cust.id}
@@ -131,15 +119,14 @@ export function PipelineBoard({
               ))}
 
               {colCustomers.length === 0 && (
-                <div className="grid place-items-center rounded-xl border border-dashed border-slate-800/60 py-12 text-xs text-slate-500">
+                <div className="grid place-items-center rounded-2xl border border-dashed border-border py-10 text-xs text-muted-foreground">
                   Drop leads here
                 </div>
               )}
             </div>
-          </div>
+          </section>
         );
       })}
     </div>
   );
 }
-
