@@ -38,7 +38,7 @@ export function buildCallQueue<T extends QueueCustomer>(
   const items: QueueItem<T>[] = [];
 
   for (const customer of customers) {
-    if (customer.status === "activated") continue;
+    if (customer.status === "activated" || customer.status === "lost") continue;
     const isNewLead = customer.status === "new_lead";
     const callbackDate = customer.next_action_date ?? null;
 

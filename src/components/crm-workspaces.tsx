@@ -283,6 +283,14 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
   const queueRemaining = queue.filter((item) => !completed.has(item.customer.id)).length;
   const queueScheduled = queueRemaining + completed.size;
 
+  const openNextQueued = (savedCustomerId: string) => {
+    refresh();
+    const next = queue.find((item) => item.customer.id !== savedCustomerId);
+    if (!next) return;
+    setDrawerCustomer(next.customer);
+    setDrawerOpen(true);
+  };
+
   const navigation =
     mode === "agent"
       ? [
@@ -558,7 +566,7 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
         customer={selected}
         today={today}
         onClose={() => setSelected(null)}
-        onSaved={refresh}
+        onSaved={openNextQueued}
       />
       {leadOpen && (
         <Dialog open onOpenChange={setLeadOpen}>
@@ -582,7 +590,7 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
           <SoftphoneBar
             telephonyState={telephonyState}
             setTelephonyState={setTelephonyState}
-            onDispositionComplete={refresh}
+            onDispositionComplete={openNextQueued}
           />
           <CustomerDrawer
             customer={drawerCustomer as any}
@@ -934,7 +942,7 @@ function OutcomeDialog({
   customer: Customer | null;
   today: string;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (customerId: string) => void;
 }) {
   const [busy, setBusy] = useState(false);
 
@@ -944,8 +952,9 @@ function OutcomeDialog({
     setBusy(true);
     const v = new FormData(e.currentTarget);
     const outcome = String(v.get("outcome"));
-    if (outcome === "Reschedule Call" && !v.get("next_action_date")) {
-      toast.error("Pick a callback date");
+    const needsDate = outcome !== "Activated" && outcome !== "Not Interested";
+    if (needsDate && !v.get("next_action_date")) {
+      toast.error("Pick a next action date");
       setBusy(false);
       return;
     }
@@ -962,8 +971,9 @@ function OutcomeDialog({
     const nextDate =
       outcome === "Activated"
         ? dateAdd(today, 7)
-        : String(v.get("next_action_date") || "") ||
-          (outcome === "Not Interested" ? null : dateAdd(today, 1));
+        : needsDate
+          ? String(v.get("next_action_date"))
+          : null;
 
     try {
       await logOutcomeFn({
@@ -982,7 +992,7 @@ function OutcomeDialog({
         },
       });
       toast.success("Outcome saved");
-      onSaved();
+      onSaved(customer.id);
       onClose();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to save outcome");
@@ -1021,13 +1031,7 @@ function OutcomeDialog({
               <option>Not Interested</option>
             </select>
           </div>
-          <Field
-            label="Next callback date"
-            name="next_action_date"
-            type="date"
-            min={today}
-            max={dateAdd(today, 8)}
-          />
+          <Field label="Next callback date" name="next_action_date" type="date" min={today} />
           <div>
             <Label htmlFor="outcome_notes">Notes</Label>
             <textarea

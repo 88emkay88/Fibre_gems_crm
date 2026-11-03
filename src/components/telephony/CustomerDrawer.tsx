@@ -20,7 +20,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import type { Customer, ActivityRow } from "./types";
-import { reissueEasyPayApi, escalateLeadApi, submitDispositionApi } from "./telephony-service";
+import {
+  reissueEasyPayApi,
+  escalateLeadApi,
+  submitDispositionApi,
+  jhbDateOffset,
+} from "./telephony-service";
 
 const ESCALATION_LEVELS = ["Level 2 - Supervisor Alert", "Level 3 - Operations Escalation"];
 
@@ -83,6 +88,7 @@ export function CustomerDrawer({
   const [activeTab, setActiveTab] = useState("overview");
   const [quickNote, setQuickNote] = useState("");
   const [dispoOutcome, setDispoOutcome] = useState("CALLBACK");
+  const [dispoDate, setDispoDate] = useState(() => jhbDateOffset(1));
   const [escalateOpen, setEscalateOpen] = useState(false);
   const [escalateLevel, setEscalateLevel] = useState(ESCALATION_LEVELS[0] ?? "");
   const [escalateReason, setEscalateReason] = useState("");
@@ -112,11 +118,14 @@ export function CustomerDrawer({
 
   const handleLogNote = async () => {
     if (!quickNote.trim()) return;
+    const needsDate = dispoOutcome !== "NI" && dispoOutcome !== "DNC";
+    if (needsDate && !dispoDate) return;
     setIsSubmitting(true);
     await submitDispositionApi({
       customerId: customer.id,
       disposition: dispoOutcome,
       notes: quickNote,
+      callbackDate: needsDate ? dispoDate : null,
     });
     setQuickNote("");
     setIsSubmitting(false);
@@ -268,6 +277,16 @@ export function CustomerDrawer({
               <option value="NI">Not interested</option>
               <option value="DNC">Do not call</option>
             </select>
+            {dispoOutcome !== "NI" && dispoOutcome !== "DNC" && (
+              <input
+                type="date"
+                value={dispoDate}
+                min={jhbDateOffset(0)}
+                onChange={(e) => setDispoDate(e.target.value)}
+                aria-label="Next action date"
+                className="h-10 rounded-full border border-input bg-card px-3 text-sm text-foreground"
+              />
+            )}
             <Input
               value={quickNote}
               onChange={(e) => setQuickNote(e.target.value)}

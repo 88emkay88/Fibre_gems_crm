@@ -56,8 +56,8 @@ export async function setAgentStatusApi(status: "ready" | "paused", pauseCode?: 
   return { agent_status: status, pause_code: pauseCode, simulated: true };
 }
 
-export function tomorrowInJohannesburg() {
-  return new Date(Date.now() + 86_400_000).toLocaleDateString("en-CA", {
+export function jhbDateOffset(days: number) {
+  return new Date(Date.now() + days * 86_400_000).toLocaleDateString("en-CA", {
     timeZone: "Africa/Johannesburg",
   });
 }
@@ -97,8 +97,6 @@ export async function submitDispositionApi(params: {
     DNC: "lost",
   };
   const targetStatus = statusMap[params.disposition] || "contacted";
-  const keepsFollowUp = params.disposition !== "NI" && params.disposition !== "DNC";
-  const tomorrow = tomorrowInJohannesburg();
 
   await logOutcomeFn({
     data: {
@@ -106,7 +104,7 @@ export async function submitDispositionApi(params: {
       outcome: params.disposition,
       status: targetStatus,
       nextAction: params.disposition === "CALLBACK" ? "Scheduled Callback" : null,
-      nextActionDate: params.callbackDate || (keepsFollowUp ? tomorrow : null),
+      nextActionDate: params.callbackDate || null,
       notes: params.notes || `Disposition: ${params.disposition}`,
     },
   });

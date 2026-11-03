@@ -7,7 +7,7 @@ import {
   hangupCallApi,
   setAgentStatusApi,
   submitDispositionApi,
-  tomorrowInJohannesburg,
+  jhbDateOffset,
 } from "./telephony-service";
 
 const PAUSE_CODES = ["LUNCH", "TEA", "MEETING", "TRAINING", "WRAPUP"];
@@ -22,7 +22,7 @@ const DISPOSITIONS = [
 interface SoftphoneBarProps {
   telephonyState: AgentTelephonyState;
   setTelephonyState: React.Dispatch<React.SetStateAction<AgentTelephonyState>>;
-  onDispositionComplete?: () => void;
+  onDispositionComplete?: (customerId: string) => void;
 }
 
 const formatTime = (secs: number) => {
@@ -39,7 +39,7 @@ export function SoftphoneBar({
   onDispositionComplete,
 }: SoftphoneBarProps) {
   const [selectedDispo, setSelectedDispo] = useState("SALE");
-  const [callbackDate, setCallbackDate] = useState(tomorrowInJohannesburg);
+  const [callbackDate, setCallbackDate] = useState(() => jhbDateOffset(1));
   const [pauseMenuOpen, setPauseMenuOpen] = useState(false);
 
   const isCallActive =
@@ -78,16 +78,18 @@ export function SoftphoneBar({
       toast.error("No active customer for this outcome");
       return;
     }
-    if (selectedDispo === "CALLBACK" && !callbackDate) {
-      toast.error("Pick a callback date");
+    const needsDate = selectedDispo !== "NI" && selectedDispo !== "DNC";
+    if (needsDate && !callbackDate) {
+      toast.error("Pick a next action date");
       return;
     }
+    const savedCustomerId = telephonyState.activeCustomerId;
 
     await submitDispositionApi({
-      customerId: telephonyState.activeCustomerId,
+      customerId: savedCustomerId,
       disposition: selectedDispo,
       notes: `Softphone outcome: ${selectedDispo}`,
-      callbackDate: selectedDispo === "CALLBACK" ? callbackDate : null,
+      callbackDate: needsDate ? callbackDate : null,
     });
 
     setTelephonyState((prev) => ({
@@ -99,7 +101,7 @@ export function SoftphoneBar({
       agentStatus: "ready",
     }));
 
-    onDispositionComplete?.();
+    onDispositionComplete?.(savedCustomerId);
   };
 
   const toggleMute = () => {
@@ -239,13 +241,13 @@ export function SoftphoneBar({
                 </option>
               ))}
             </select>
-            {selectedDispo === "CALLBACK" && (
+            {selectedDispo !== "NI" && selectedDispo !== "DNC" && (
               <input
                 type="date"
                 value={callbackDate}
-                min={tomorrowInJohannesburg()}
+                min={jhbDateOffset(0)}
                 onChange={(e) => setCallbackDate(e.target.value)}
-                aria-label="Callback date"
+                aria-label="Next action date"
                 required
                 className="h-10 rounded-full border border-input bg-card px-3 text-sm text-foreground"
               />
