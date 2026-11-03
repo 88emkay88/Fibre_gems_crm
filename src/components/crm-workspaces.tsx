@@ -33,6 +33,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AgilitySync } from "@/components/agility-sync";
 import { TopMetricsBar } from "./telephony/TopMetricsBar";
 import { PipelineBoard } from "./telephony/PipelineBoard";
+import { LeadQueue } from "./telephony/LeadQueue";
 import { CustomerDrawer } from "./telephony/CustomerDrawer";
 import { SoftphoneBar } from "./telephony/SoftphoneBar";
 import { dialCustomerApi, updateStageApi } from "./telephony/telephony-service";
@@ -423,16 +424,30 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
                 isRefreshing={workspaceQ.isFetching}
               />
 
-              <PipelineBoard
-                customers={customers as any}
-                onSelectCustomer={(c) => {
-                  setDrawerCustomer(c as any);
-                  setDrawerOpen(true);
-                }}
-                onCallCustomer={handleCall}
-                onMoveCustomer={handleMoveCustomer}
-                activeDialingId={telephonyState.activeCustomerId}
-              />
+              <div className="grid gap-4 lg:grid-cols-4">
+                <LeadQueue
+                  customers={customers as any}
+                  today={today}
+                  activeDialingId={telephonyState.activeCustomerId}
+                  onSelectCustomer={(c) => {
+                    setDrawerCustomer(c as any);
+                    setDrawerOpen(true);
+                  }}
+                  onCallCustomer={handleCall}
+                />
+                <div className="min-w-0 lg:col-span-3">
+                  <PipelineBoard
+                    customers={customers as any}
+                    onSelectCustomer={(c) => {
+                      setDrawerCustomer(c as any);
+                      setDrawerOpen(true);
+                    }}
+                    onCallCustomer={handleCall}
+                    onMoveCustomer={handleMoveCustomer}
+                    activeDialingId={telephonyState.activeCustomerId}
+                  />
+                </div>
+              </div>
             </div>
           )}
 
