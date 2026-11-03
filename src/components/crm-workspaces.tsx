@@ -353,8 +353,8 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
               <Shield className="size-5" />
             </div>
             <div>
-              <div className="font-bold text-white">FibreGems</div>
-              <div className="text-[10px] uppercase text-primary">
+              <div className="font-semibold tracking-tight text-foreground">FibreGems</div>
+              <div className="text-[11px] font-medium text-muted-foreground">
                 {mode === "admin" ? "Command Centre" : "Agent Daily Workspace"}
               </div>
             </div>
@@ -369,7 +369,7 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
               {name.slice(0, 1).toUpperCase()}
             </div>
             <div className="min-w-0">
-              <div className="truncate text-sm font-semibold text-white">{name}</div>
+              <div className="truncate text-sm font-semibold text-foreground">{name}</div>
               <div className="text-xs text-muted-foreground">
                 {mode === "admin" ? "System Administrator" : "Sales Agent"}
               </div>
@@ -407,7 +407,7 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
         </div>
       </aside>
       <main className="min-h-screen lg:ml-64 pb-24">
-        <header className="flex min-h-20 items-center justify-between gap-3 border-b border-border px-4 md:px-8">
+        <header className="sticky top-0 z-20 flex min-h-20 items-center justify-between gap-3 border-b border-border/70 bg-background/80 px-4 backdrop-blur-xl md:px-8">
           <div className="flex min-w-0 items-center gap-3">
             <Button
               variant="outline"
@@ -422,7 +422,7 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
               <p className="text-[11px] font-semibold uppercase text-primary">
                 {mode === "admin" ? "FibreGems / Administration" : `FibreGems / ${dateText(today)}`}
               </p>
-              <h1 className="text-xl font-bold md:text-2xl">{heading}</h1>
+              <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{heading}</h1>
             </div>
           </div>
           <div className="flex gap-2">
@@ -443,7 +443,7 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
             )}
           </div>
         </header>
-        <div className="mx-auto max-w-[1600px] space-y-7 p-4 md:p-8">
+        <div className="mx-auto max-w-[1600px] space-y-6 p-4 md:p-8">
           {workspaceQ.isError ? (
             <div className="border border-destructive p-4 text-destructive">
               Unable to load CRM data.{" "}

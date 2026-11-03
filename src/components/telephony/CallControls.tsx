@@ -20,7 +20,7 @@ type CallControlsProps = {
 };
 
 const controlClass =
-  "flex h-auto flex-col gap-1.5 rounded-2xl bg-card px-2 py-2.5 text-xs font-medium disabled:opacity-50";
+  "flex h-auto flex-col gap-1.5 rounded-2xl bg-muted/60 px-2 py-2.5 text-xs font-medium hover:bg-muted disabled:opacity-50";
 
 export function CallControls({ telephonyState, setTelephonyState }: CallControlsProps) {
   const qc = useQueryClient();

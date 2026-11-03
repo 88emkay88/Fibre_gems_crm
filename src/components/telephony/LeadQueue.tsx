@@ -14,13 +14,13 @@ interface LeadQueueProps {
 
 const urgencyTint: Record<Urgency, string | null> = {
   none: null,
-  warm: "border-primary/50 bg-primary/10",
-  critical: "border-destructive/50 bg-destructive/10",
+  warm: "border-warning/30 bg-warning/10",
+  critical: "border-destructive/30 bg-destructive/10",
 };
 
 const urgencyText: Record<Urgency, string> = {
   none: "text-muted-foreground",
-  warm: "font-semibold text-primary",
+  warm: "font-semibold text-warning",
   critical: "font-semibold text-destructive",
 };
 
@@ -62,7 +62,7 @@ export function LeadQueue({
               }`}
             >
               <span
-                className={`h-10 w-1 shrink-0 rounded-full ${urgency === "critical" ? "bg-destructive" : urgency === "warm" ? "bg-primary" : stage.accent}`}
+                className={`h-10 w-1 shrink-0 rounded-full ${urgency === "critical" ? "bg-destructive" : urgency === "warm" ? "bg-warning" : stage.accent}`}
               />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-foreground">{name}</p>

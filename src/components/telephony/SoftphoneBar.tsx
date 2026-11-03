@@ -131,7 +131,7 @@ export function SoftphoneBar({
       )}
 
       <div className="fixed bottom-6 left-1/2 z-50 w-[calc(100%-2rem)] max-w-xl -translate-x-1/2">
-        <div className="flex flex-col gap-3 rounded-3xl border border-border bg-card/95 p-3 shadow-2xl backdrop-blur-xl">
+        <div className="flex flex-col gap-3 rounded-[28px] bg-card/85 p-3 shadow-[0_12px_40px_rgba(0,0,0,0.12)] ring-1 ring-black/5 backdrop-blur-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
           <div className="flex items-center justify-between gap-3 px-1">
             <div className="flex min-w-0 items-center gap-2.5">
               <span

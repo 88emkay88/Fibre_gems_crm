@@ -76,7 +76,7 @@ export function ActiveCallPanel({
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
-      className="fixed z-50 flex touch-none select-none flex-col gap-3 rounded-3xl border border-border bg-card/95 p-4 shadow-2xl backdrop-blur-xl cursor-grab active:cursor-grabbing"
+      className="fixed z-50 flex touch-none select-none cursor-grab flex-col gap-3 rounded-[28px] bg-card/90 p-4 shadow-[0_24px_60px_rgba(0,0,0,0.16)] ring-1 ring-black/5 backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-300 active:cursor-grabbing"
     >
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2.5">

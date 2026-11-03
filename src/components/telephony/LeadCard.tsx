@@ -42,8 +42,8 @@ export function LeadCard({ customer, onSelect, onCall, isDialing = false }: Lead
       onClick={() => onSelect(customer)}
       draggable
       onDragStart={(e) => e.dataTransfer.setData("text/plain", customer.id)}
-      className={`group cursor-grab rounded-2xl border bg-card p-3.5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:cursor-grabbing ${
-        isDialing ? "border-primary ring-2 ring-primary/30" : "border-border"
+      className={`group cursor-grab rounded-2xl bg-card p-3.5 shadow-sm ring-1 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:cursor-grabbing ${
+        isDialing ? "ring-2 ring-primary/40" : "ring-black/5"
       }`}
     >
       <div className="flex items-start justify-between gap-2">
