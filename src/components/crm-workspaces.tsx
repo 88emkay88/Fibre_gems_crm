@@ -58,24 +58,7 @@ import { CustomerDrawer } from "./telephony/CustomerDrawer";
 import { ViciDialSimulator } from "./telephony/ViciDialSimulator";
 import { SoftphoneBar } from "./telephony/SoftphoneBar";
 import { dialCustomerApi, updateStageApi, type DialResult } from "./telephony/telephony-service";
-import type { AgentTelephonyState } from "./telephony/types";
-
-type Customer = {
-  id: string;
-  full_name: string;
-  first_name: string;
-  surname: string;
-  cell_number: string;
-  area_suburb: string | null;
-  product_package: string | null;
-  payment_type: string | null;
-  status: string;
-  owner_id: string;
-  next_action: string | null;
-  next_action_date: string | null;
-  last_contact_date: string | null;
-  created_at: string;
-};
+import type { AgentTelephonyState, Customer } from "./telephony/types";
 
 type ActivityRow = {
   id: string;
@@ -271,7 +254,11 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
     }));
   };
 
-  const handleCall = async (customer: Customer) => {
+  const handleCall = (customer: Customer) => {
+    void placeCall(customer);
+  };
+
+  const placeCall = async (customer: Customer) => {
     const name = customer.full_name || `${customer.first_name} ${customer.surname}`;
     
     // Immediately open modal and select this customer
@@ -613,7 +600,7 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
             <CallbackQueueView
               items={queue}
               today={today}
-              onSelect={setSelected}
+              onSelect={(c) => setSelected(c)}
               onOpenDetails={(c) => {
                 setDrawerCustomer(c as any);
                 setDrawerOpen(true);
@@ -989,14 +976,14 @@ function LeadForm({
           first_name: String(v.get("first_name") ?? ""),
           surname: String(v.get("surname") ?? ""),
           cell_number: cell,
-          alternate_cell_number: String(v.get("alternate_cell_number") || "") || undefined,
-          email: String(v.get("email") || "") || undefined,
-          area_suburb: String(v.get("area_suburb") || "") || undefined,
-          full_address: String(v.get("full_address") || "") || undefined,
-          product_package: String(v.get("product_package") || "") || undefined,
-          payment_type: String(v.get("payment_type") || "") || undefined,
-          next_action: String(v.get("next_action") || "") || undefined,
-          next_action_date: String(v.get("next_action_date") || "") || undefined,
+          alternate_cell_number: String(v.get("alternate_cell_number") ?? ""),
+          email: String(v.get("email") ?? ""),
+          area_suburb: String(v.get("area_suburb") ?? ""),
+          full_address: String(v.get("full_address") ?? ""),
+          product_package: String(v.get("product_package") ?? ""),
+          payment_type: String(v.get("payment_type") ?? ""),
+          next_action: String(v.get("next_action") ?? ""),
+          next_action_date: String(v.get("next_action_date") ?? ""),
         },
       });
       toast.success("Lead captured successfully");
