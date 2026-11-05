@@ -6,6 +6,7 @@ import type { QueueItem } from "./call-queue";
 import { PIPELINE_STAGES } from "./pipeline-stages";
 import type { Customer } from "./types";
 import { useKanbanDrag } from "./use-kanban-drag";
+import { useStageFlash } from "./use-stage-flash";
 
 interface KanbanViewProps {
   queue: QueueItem<Customer>[];
@@ -30,6 +31,7 @@ export function KanbanView({
   onHangup,
   onMoveCustomer,
 }: KanbanViewProps) {
+  const flashIds = useStageFlash(customers);
   const drag = useKanbanDrag({
     onSelect: onSelectCustomer,
     onDrop: (customer, stageId) => {
@@ -56,6 +58,7 @@ export function KanbanView({
         <PipelineBoard
           customers={customers}
           drag={drag}
+          flashIds={flashIds}
           onCallCustomer={onCallCustomer}
           onHangup={onHangup}
           onSelectCustomer={onSelectCustomer}

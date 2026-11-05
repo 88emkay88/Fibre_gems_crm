@@ -65,6 +65,27 @@ export const PIPELINE_STAGES: PipelineStage[] = [
   },
 ];
 
+export const OUTCOMES = [
+  { code: "NO_ANSWER", label: "No answer", status: null, dateRequired: true },
+  { code: "CALLBACK", label: "Callback", status: "contacted", dateRequired: true },
+  { code: "PAYMENT_PROMISED", label: "Payment promised", status: "payment_pending", dateRequired: true },
+  { code: "SALE", label: "Sale won", status: "payment_pending", dateRequired: true },
+  { code: "PAYMENT_RECEIVED", label: "Payment received", status: "activation_pending", dateRequired: true },
+  { code: "ACTIVATED", label: "Activated", status: "activated", dateRequired: false },
+  { code: "NI", label: "Not interested", status: "lost", dateRequired: false },
+  { code: "DNC", label: "Do not call", status: "lost", dateRequired: false },
+] as const;
+
+export type OutcomeCode = (typeof OUTCOMES)[number]["code"];
+
+export function outcomeFor(code: string) {
+  return OUTCOMES.find((o) => o.code === code);
+}
+
+export function statusForOutcome(code: string, currentStatus: string) {
+  return outcomeFor(code)?.status ?? currentStatus;
+}
+
 export function stageForStatus(status: string): PipelineStage {
   const stage = PIPELINE_STAGES.find((s) => s.statuses.includes(status));
   return stage ?? PIPELINE_STAGES[0]!;

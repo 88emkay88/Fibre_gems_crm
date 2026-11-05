@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Check, ChevronDown, Phone, PhoneOff } from "lucide-react";
 import { toast } from "sonner";
-import type { AgentTelephonyState } from "./types";
+import type { AgentTelephonyState, Customer } from "./types";
 import {
   formatCallTime,
   jhbDateOffset,
@@ -10,21 +10,16 @@ import {
 } from "./telephony-service";
 import { endActiveCall } from "./CallControls";
 import { ActiveCallPanel } from "./ActiveCallPanel";
+import { OUTCOMES, outcomeFor } from "./pipeline-stages";
 
 const PAUSE_CODES = ["LUNCH", "TEA", "MEETING", "TRAINING", "WRAPUP"];
-const DISPOSITIONS = [
-  { value: "SALE", label: "Sale won" },
-  { value: "CALLBACK", label: "Callback" },
-  { value: "PAYMENT_PROMISED", label: "Payment promised" },
-  { value: "NI", label: "Not interested" },
-  { value: "DNC", label: "Do not call" },
-];
-
 interface SoftphoneBarProps {
   telephonyState: AgentTelephonyState;
   setTelephonyState: React.Dispatch<React.SetStateAction<AgentTelephonyState>>;
   onOpenDial: () => void;
   onDispositionComplete?: (customerId: string) => void;
+  activeCustomer: Customer | null;
+  onLogOutcome: () => void;
 }
 
 export function SoftphoneBar({
@@ -32,6 +27,8 @@ export function SoftphoneBar({
   setTelephonyState,
   onOpenDial,
   onDispositionComplete,
+  activeCustomer,
+  onLogOutcome,
 }: SoftphoneBarProps) {
   const [selectedDispo, setSelectedDispo] = useState("SALE");
   const [callbackDate, setCallbackDate] = useState(() => jhbDateOffset(1));
@@ -69,7 +66,7 @@ export function SoftphoneBar({
       toast.error("No active customer for this outcome");
       return;
     }
-    const needsDate = selectedDispo !== "NI" && selectedDispo !== "DNC";
+    const needsDate = outcomeFor(selectedDispo)?.dateRequired ?? false;
     if (needsDate && !callbackDate) {
       toast.error("Pick a next action date");
       return;
@@ -80,6 +77,7 @@ export function SoftphoneBar({
       await submitDispositionApi({
         customerId: savedCustomerId,
         disposition: selectedDispo,
+        currentStatus: activeCustomer?.status ?? "",
         notes: `Softphone outcome: ${selectedDispo}`,
         callbackDate: needsDate ? callbackDate : null,
       });
@@ -123,7 +121,12 @@ export function SoftphoneBar({
   return (
     <>
       {isCallActive && (
-        <ActiveCallPanel telephonyState={telephonyState} setTelephonyState={setTelephonyState} />
+        <ActiveCallPanel
+          telephonyState={telephonyState}
+          setTelephonyState={setTelephonyState}
+          activeCustomer={activeCustomer}
+          onLogOutcome={onLogOutcome}
+        />
       )}
 
       <div className="fixed bottom-5 left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2 items-center gap-3 lg:left-[calc(50%+8rem)]">
@@ -212,13 +215,13 @@ export function SoftphoneBar({
                 aria-label="Outcome"
                 className="h-9 flex-1 rounded-full border border-white/10 bg-white/5 px-4 text-xs font-medium text-white disabled:opacity-30 focus:border-[#F5B021]/50 focus:outline-none"
               >
-                {DISPOSITIONS.map((d) => (
-                  <option key={d.value} value={d.value} className="bg-[#1a1a1a] text-white">
-                    {d.label}
+                {OUTCOMES.map((o) => (
+                  <option key={o.code} value={o.code} className="bg-[#1a1a1a] text-white">
+                    {o.label}
                   </option>
                 ))}
               </select>
-              {selectedDispo !== "NI" && selectedDispo !== "DNC" && (
+              {outcomeFor(selectedDispo)?.dateRequired && (
                 <input
                   type="date"
                   value={callbackDate}

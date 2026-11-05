@@ -12,6 +12,7 @@ interface LeadCardProps {
   onPointerDown?: (e: React.PointerEvent<HTMLElement>) => void;
   isDialing?: boolean;
   isDragging?: boolean;
+  isArriving?: boolean;
   callDurationSeconds?: number;
 }
 
@@ -39,6 +40,7 @@ export function LeadCard({
   onPointerDown,
   isDialing = false,
   isDragging = false,
+  isArriving = false,
   callDurationSeconds = 0,
 }: LeadCardProps) {
   const normPhone = customer.cell_number.replace(/\D/g, "");
@@ -86,7 +88,7 @@ export function LeadCard({
           : isPreviousClient
           ? "border-[#F5B021]/30 bg-[#161410] hover:border-[#F5B021]/60 shadow-[0_4px_15px_rgba(0,0,0,0.4)]"
           : "border-white/5 bg-[#141414] hover:border-white/15"
-      } ${isDragging ? "opacity-40" : ""}`}
+      } ${isDragging ? "opacity-40" : ""} ${isArriving ? "animate-stage-arrive" : ""}`}
     >
       {/* Live Call Banner if active */}
       {isDialing && (

@@ -36,6 +36,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { QuickDialDialog } from "./telephony/QuickDialDialog";
 import { OutcomeCustomerDetails } from "./telephony/OutcomeCustomerDetails";
+import { OUTCOMES, outcomeFor, statusForOutcome } from "./telephony/pipeline-stages";
 import { PRODUCT_PACKAGES } from "./telephony/types";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -54,7 +55,6 @@ import { buildCallQueue } from "./telephony/call-queue";
 import { CallbackQueueView } from "./agent-callbacks";
 import { AgentLeadsView } from "./agent-leads";
 import { CustomerDrawer } from "./telephony/CustomerDrawer";
-import { CustomerCallCommandModal } from "./telephony/CustomerCallCommandModal";
 import { ViciDialSimulator } from "./telephony/ViciDialSimulator";
 import { SoftphoneBar } from "./telephony/SoftphoneBar";
 import { dialCustomerApi, updateStageApi, type DialResult } from "./telephony/telephony-service";
@@ -711,6 +711,11 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
             setTelephonyState={setTelephonyState}
             onOpenDial={() => setDialOpen(true)}
             onDispositionComplete={openNextQueued}
+            activeCustomer={customers.find((c) => c.id === telephonyState.activeCustomerId) ?? null}
+            onLogOutcome={() => {
+              const active = customers.find((c) => c.id === telephonyState.activeCustomerId);
+              if (active) setSelected(active);
+            }}
           />
           <CustomerDrawer
             customer={drawerCustomer as any}
@@ -1074,24 +1079,16 @@ function OutcomeDialog({
     setBusy(true);
     const v = new FormData(e.currentTarget);
     const outcome = String(v.get("outcome"));
-    const needsDate = outcome !== "Activated" && outcome !== "Not Interested";
+    const needsDate = outcomeFor(outcome)?.dateRequired ?? false;
     if (needsDate && !v.get("next_action_date")) {
       toast.error("Pick a next action date");
       setBusy(false);
       return;
     }
-    const status =
-      (
-        {
-          "Sale Won": "payment_pending",
-          Activated: "activated",
-          "Not Interested": "lost",
-          "Payment Received": "activation_pending",
-        } as Record<string, string>
-      )[outcome] ?? customer.status;
+    const status = statusForOutcome(outcome, customer.status);
 
     const nextDate =
-      outcome === "Activated"
+      outcome === "ACTIVATED"
         ? dateAdd(today, 7)
         : needsDate
           ? String(v.get("next_action_date"))
@@ -1105,9 +1102,9 @@ function OutcomeDialog({
           status,
           nextActionDate: nextDate,
           nextAction:
-            outcome === "Activated"
+            outcome === "ACTIVATED"
               ? "After-Sales Call"
-              : outcome === "Not Interested"
+              : outcome === "NI" || outcome === "DNC"
                 ? "No Further Action"
                 : "Customer Callback",
           notes: String(v.get("notes") || "") || null,
@@ -1146,12 +1143,11 @@ function OutcomeDialog({
               name="outcome"
               className="mt-1 h-10 w-full border border-input bg-background px-3"
             >
-              <option>No Answer</option>
-              <option>Reschedule Call</option>
-              <option>Sale Won</option>
-              <option>Activated</option>
-              <option>Payment Received</option>
-              <option>Not Interested</option>
+              {OUTCOMES.map((o) => (
+                <option key={o.code} value={o.code}>
+                  {o.label}
+                </option>
+              ))}
             </select>
           </div>
           <Field label="Next callback date" name="next_action_date" type="date" min={today} />

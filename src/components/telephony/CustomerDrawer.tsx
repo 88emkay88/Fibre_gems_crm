@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import type { Customer, ActivityRow } from "./types";
+import { OUTCOMES, outcomeFor } from "./pipeline-stages";
 import {
   reissueEasyPayApi,
   escalateLeadApi,
@@ -154,12 +155,13 @@ export function CustomerDrawer({
 
   const handleLogNote = async () => {
     if (!quickNote.trim()) return;
-    const needsDate = dispoOutcome !== "NI" && dispoOutcome !== "DNC";
+    const needsDate = outcomeFor(dispoOutcome)?.dateRequired ?? false;
     if (needsDate && !dispoDate) return;
     setIsSubmitting(true);
     await submitDispositionApi({
       customerId: customer.id,
       disposition: dispoOutcome,
+      currentStatus: customer.status,
       notes: quickNote,
       callbackDate: needsDate ? dispoDate : null,
     });
@@ -325,13 +327,13 @@ export function CustomerDrawer({
               aria-label="Outcome"
               className="h-10 rounded-full border border-input bg-background px-3 text-sm text-foreground"
             >
-              <option value="CALLBACK">Callback</option>
-              <option value="PAYMENT_PROMISED">Payment promised</option>
-              <option value="SALE">Sale won</option>
-              <option value="NI">Not interested</option>
-              <option value="DNC">Do not call</option>
+              {OUTCOMES.map((o) => (
+                <option key={o.code} value={o.code}>
+                  {o.label}
+                </option>
+              ))}
             </select>
-            {dispoOutcome !== "NI" && dispoOutcome !== "DNC" && (
+            {outcomeFor(dispoOutcome)?.dateRequired && (
               <input
                 type="date"
                 value={dispoDate}

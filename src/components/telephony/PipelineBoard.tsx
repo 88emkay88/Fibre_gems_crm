@@ -6,6 +6,7 @@ import type { KanbanDrag } from "./use-kanban-drag";
 interface PipelineBoardProps {
   customers: Customer[];
   drag: KanbanDrag;
+  flashIds: ReadonlySet<string>;
   onCallCustomer: (customer: Customer) => void;
   onHangup?: (() => void) | undefined;
   onSelectCustomer?: ((customer: Customer) => void) | undefined;
@@ -16,6 +17,7 @@ interface PipelineBoardProps {
 export function PipelineBoard({
   customers,
   drag,
+  flashIds,
   onCallCustomer,
   onHangup,
   onSelectCustomer,
@@ -61,6 +63,7 @@ export function PipelineBoard({
                   onSelect={onSelectCustomer}
                   isDialing={activeDialingId === cust.id}
                   isDragging={drag.draggingId === cust.id}
+                  isArriving={flashIds.has(cust.id)}
                   callDurationSeconds={activeDialingId === cust.id ? callDurationSeconds : 0}
                   onPointerDown={(e) => drag.startDrag(e, cust)}
                 />

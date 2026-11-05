@@ -1,7 +1,7 @@
 import { useState, type Dispatch, type SetStateAction } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Mic, MicOff, Pause, Play, PhoneOff, PhoneMissed, ShieldAlert } from "lucide-react";
+import { ClipboardCheck, Mic, MicOff, Pause, Play, PhoneOff, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { AgentTelephonyState } from "./types";
@@ -17,6 +17,7 @@ import {
 type CallControlsProps = {
   telephonyState: AgentTelephonyState;
   setTelephonyState: Dispatch<SetStateAction<AgentTelephonyState>>;
+  onLogOutcome: () => void;
 };
 
 const controlClass =
@@ -35,7 +36,7 @@ export async function endActiveCall(
   toast.info("Call ended. Choose an outcome to continue.");
 }
 
-export function CallControls({ telephonyState, setTelephonyState }: CallControlsProps) {
+export function CallControls({ telephonyState, setTelephonyState, onLogOutcome }: CallControlsProps) {
   const qc = useQueryClient();
   const [escalateOpen, setEscalateOpen] = useState(false);
   const [escalateLevel, setEscalateLevel] = useState(ESCALATION_LEVELS[0] ?? "");
@@ -76,7 +77,7 @@ export function CallControls({ telephonyState, setTelephonyState }: CallControls
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="grid grid-cols-5 gap-1.5">
+      <div className="grid grid-cols-3 gap-2">
         <Button
           variant="ghost"
           onClick={toggleMute}
@@ -97,16 +98,6 @@ export function CallControls({ telephonyState, setTelephonyState }: CallControls
         </Button>
         <Button
           variant="ghost"
-          disabled
-          title="Drop needs a VICIdial drop endpoint, which is not connected yet"
-          aria-label="Drop (not available yet)"
-          className={`${controlClass} text-muted-foreground`}
-        >
-          <PhoneMissed className="size-4" />
-          Drop
-        </Button>
-        <Button
-          variant="ghost"
           onClick={() => setEscalateOpen((open) => !open)}
           aria-expanded={escalateOpen}
           className={`${controlClass} text-foreground`}
@@ -114,11 +105,17 @@ export function CallControls({ telephonyState, setTelephonyState }: CallControls
           <ShieldAlert className="size-4" />
           Escalate
         </Button>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <Button onClick={onLogOutcome} className="h-11 rounded-2xl text-sm font-semibold">
+          <ClipboardCheck className="size-4" />
+          Log outcome
+        </Button>
         <Button
           variant="destructive"
           onClick={() => endActiveCall(setTelephonyState)}
           aria-label="Hang up"
-          className="flex h-auto flex-col gap-1.5 rounded-2xl px-2 py-2.5 text-xs font-semibold"
+          className="h-11 rounded-2xl text-sm font-semibold"
         >
           <PhoneOff className="size-4" />
           Hang up

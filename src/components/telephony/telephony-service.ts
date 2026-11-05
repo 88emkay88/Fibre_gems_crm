@@ -11,14 +11,6 @@ import {
 
 const API_BASE = (import.meta.env["VITE_API_BASE_URL"] as string) || "http://127.0.0.1:8000/api/v1";
 
-const DISPOSITION_STATUS: Record<string, string> = {
-  SALE: "order_submitted",
-  PAYMENT_PROMISED: "payment_pending",
-  CALLBACK: "contacted",
-  NI: "lost",
-  DNC: "lost",
-};
-
 export const ESCALATION_LEVELS = ["Level 2 - Supervisor Alert", "Level 3 - Operations Escalation"];
 
 function errorMessage(err: unknown) {
@@ -113,6 +105,7 @@ export function formatCallTime(secs: number) {
 export async function submitDispositionApi(params: {
   customerId: string;
   disposition: string;
+  currentStatus: string;
   notes?: string;
   callbackDate?: string | null;
 }) {
@@ -125,14 +118,14 @@ export async function submitDispositionApi(params: {
     data: {
       customerId: params.customerId,
       outcome: params.disposition,
-      status: DISPOSITION_STATUS[params.disposition] ?? "contacted",
+      status: statusForOutcome(params.disposition, params.currentStatus),
       nextAction: params.disposition === "CALLBACK" ? "Scheduled Callback" : null,
       nextActionDate: params.callbackDate || null,
       notes,
     },
   });
 
-  toast.success(`Outcome saved: ${params.disposition}`);
+  toast.success(`Outcome saved: ${outcomeFor(params.disposition)?.label ?? params.disposition}`);
 }
 
 export type CustomerDetailsPatch = {

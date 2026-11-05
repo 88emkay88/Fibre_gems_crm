@@ -6,9 +6,10 @@ import {
   type SetStateAction,
 } from "react";
 import { Phone } from "lucide-react";
-import type { AgentTelephonyState } from "./types";
+import type { AgentTelephonyState, Customer } from "./types";
 import { CallControls } from "./CallControls";
 import { formatCallTime } from "./telephony-service";
+import { stageForStatus } from "./pipeline-stages";
 
 const PANEL_WIDTH = 320;
 const EDGE_MARGIN = 8;
@@ -16,11 +17,18 @@ const EDGE_MARGIN = 8;
 type ActiveCallPanelProps = {
   telephonyState: AgentTelephonyState;
   setTelephonyState: Dispatch<SetStateAction<AgentTelephonyState>>;
+  activeCustomer: Customer | null;
+  onLogOutcome: () => void;
 };
 
 type Position = { x: number; y: number };
 
-export function ActiveCallPanel({ telephonyState, setTelephonyState }: ActiveCallPanelProps) {
+export function ActiveCallPanel({
+  telephonyState,
+  setTelephonyState,
+  activeCustomer,
+  onLogOutcome,
+}: ActiveCallPanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const dragOrigin = useRef<{
     pointerX: number;
@@ -84,6 +92,13 @@ export function ActiveCallPanel({ telephonyState, setTelephonyState }: ActiveCal
             <p className="truncate text-xs text-muted-foreground">
               {telephonyState.activeCustomerPhone || ""}
             </p>
+            {activeCustomer && (
+              <span
+                className={`mt-1 inline-flex max-w-full items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${stageForStatus(activeCustomer.status).tint} ${stageForStatus(activeCustomer.status).text}`}
+              >
+                <span className="truncate">{stageForStatus(activeCustomer.status).title}</span>
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -92,7 +107,11 @@ export function ActiveCallPanel({ telephonyState, setTelephonyState }: ActiveCal
         {formatCallTime(telephonyState.callDurationSeconds)}
       </p>
 
-      <CallControls telephonyState={telephonyState} setTelephonyState={setTelephonyState} />
+      <CallControls
+        telephonyState={telephonyState}
+        setTelephonyState={setTelephonyState}
+        onLogOutcome={onLogOutcome}
+      />
     </div>
   );
 }
