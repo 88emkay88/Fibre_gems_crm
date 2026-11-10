@@ -1,0 +1,1 @@
+-- Intentionally empty: orders table already defines ovr_number and ovk_number (see 0000_create_fibregems_crm_foundation.sql)

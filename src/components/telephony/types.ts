@@ -29,9 +29,13 @@ export type Customer = {
   next_action_date?: string | null;
   last_contact_date?: string | null;
   easypay_number?: string | null;
-  easypay_cycle?: string | null;
+  easypay_cycle?: string | number | null;
+  easypay_expiry?: string | null;
   easypay_expiry_date?: string | null;
   order_number?: string | null;
+  ovr_number?: string | null;
+  ovk_number?: string | null;
+  referral_code?: string | null;
   escalation_flag?: boolean | null;
   escalation_level?: string | null;
   escalation_reason?: string | null;
@@ -61,8 +65,18 @@ export const PRODUCT_PACKAGES = [
   "Vuma Reach 100Mbps/50Mbps",
 ] as const;
 
+export type CallProgressStatus =
+  | "dialing"
+  | "ringing"
+  | "connected"
+  | "does_not_exist"
+  | "busy"
+  | "hung_up";
+
 export type AgentTelephonyState = {
   agentStatus: "ready" | "paused" | "in_call" | "dialing";
+  callProgress?: CallProgressStatus | null;
+  callErrorReason?: string | null;
   pauseCode?: string | null;
   activeCustomerId?: string | null;
   activeCustomerName?: string | null;
@@ -71,4 +85,5 @@ export type AgentTelephonyState = {
   isMuted: boolean;
   isOnHold: boolean;
   viciLeadId?: string | null;
+  outcomeLoggedForCall?: boolean;
 };

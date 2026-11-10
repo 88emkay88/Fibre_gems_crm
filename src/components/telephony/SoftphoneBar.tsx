@@ -20,6 +20,8 @@ interface SoftphoneBarProps {
   onDispositionComplete?: (customerId: string) => void;
   activeCustomer: Customer | null;
   onLogOutcome: () => void;
+  onOpenCustomerDetails?: () => void;
+  onCaptureReferral?: (customer: Customer) => void;
 }
 
 export function SoftphoneBar({
@@ -29,6 +31,8 @@ export function SoftphoneBar({
   onDispositionComplete,
   activeCustomer,
   onLogOutcome,
+  onOpenCustomerDetails,
+  onCaptureReferral,
 }: SoftphoneBarProps) {
   const [selectedDispo, setSelectedDispo] = useState("SALE");
   const [callbackDate, setCallbackDate] = useState(() => jhbDateOffset(1));
@@ -126,10 +130,12 @@ export function SoftphoneBar({
           setTelephonyState={setTelephonyState}
           activeCustomer={activeCustomer}
           onLogOutcome={onLogOutcome}
+          onOpenCustomerDetails={onOpenCustomerDetails}
+          onCaptureReferral={onCaptureReferral}
         />
       )}
 
-      <div className="fixed bottom-5 left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2 items-center gap-3 lg:left-[calc(50%+8rem)]">
+      <div className="fixed bottom-5 left-1/2  flex w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2 items-center gap-3 lg:left-[calc(50%+8rem)]">
         {isCallActive ? (
           <button
             onClick={() => endActiveCall(setTelephonyState)}

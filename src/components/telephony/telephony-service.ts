@@ -51,7 +51,6 @@ export async function hangupCallApi() {
     return true;
   } catch (err) {
     return true;
-    return false;
   }
 }
 
@@ -61,7 +60,6 @@ export async function setCallHoldApi(enabled: boolean) {
     return true;
   } catch (err) {
     return true;
-    return false;
   }
 }
 
@@ -71,7 +69,6 @@ export async function setCallMuteApi(enabled: boolean) {
     return true;
   } catch (err) {
     return true;
-    return false;
   }
 }
 
@@ -138,6 +135,12 @@ export type CustomerDetailsPatch = {
   area_suburb: string | null;
   product_package: string | null;
   payment_type: string | null;
+  easypay_number?: string | null;
+  easypay_cycle?: string | number | null;
+  easypay_expiry_date?: string | null;
+  easypay_expiry?: string | null;
+  ovr_number?: string | null;
+  ovk_number?: string | null;
 };
 
 export async function updateCustomerDetailsApi(customerId: string, patch: CustomerDetailsPatch) {

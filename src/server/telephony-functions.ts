@@ -89,8 +89,11 @@ function unwrapDialer<T>(result: RemiResult<T>): T {
     case "timeout":
     case "unreachable":
       throw new Error("VICIdial did not respond. Try again in a moment.");
+    case "http_error":
+      // Surface the actual VICIdial error message from the detail field
+      throw new Error(result.detail || "VICIdial returned an error. Check the agent session and lead.");
     default:
-      throw new Error("VICIdial rejected the request. Check the lead and try again.");
+      throw new Error(result.detail || "VICIdial rejected the request. Check the agent session and lead.");
   }
 }
 

@@ -210,12 +210,40 @@ export const getWorkspaceDataFn = createServerFn({ method: "GET" })
     const mode = params?.mode ?? (user.role === "admin" ? "admin" : "agent");
 
     if (isMockMode()) {
-      let custs = Array.from(mockStore.customers.values()).filter(
+      let rawCusts = Array.from(mockStore.customers.values()).filter(
         (c) => c.recordStatus === "active"
       );
       if (mode === "agent") {
-        custs = custs.filter((c) => c.ownerId === user.id);
+        rawCusts = rawCusts.filter((c) => c.ownerId === user.id);
       }
+
+      const custs = rawCusts.map((c) => ({
+        id: c.id,
+        full_name: (c as any).full_name || (c as any).fullName || `${c.firstName} ${c.surname}`.trim(),
+        first_name: (c as any).first_name || (c as any).firstName,
+        surname: (c as any).surname,
+        cell_number: (c as any).cell_number || (c as any).cellNumber,
+        alternate_cell_number: (c as any).alternate_cell_number || (c as any).alternateCellNumber || null,
+        email: c.email || null,
+        full_address: (c as any).full_address || (c as any).fullAddress || null,
+        area_suburb: (c as any).area_suburb || (c as any).areaSuburb || null,
+        product_package: (c as any).product_package || (c as any).productPackage || null,
+        payment_type: (c as any).payment_type || (c as any).paymentType || null,
+        easypay_number: (c as any).easypay_number || (c as any).easypayNumber || null,
+        easypay_cycle: (c as any).easypay_cycle || (c as any).easypayCycle || null,
+        easypay_expiry: (c as any).easypay_expiry || (c as any).easypayExpiry || null,
+        easypay_expiry_date: (c as any).easypay_expiry_date || (c as any).easypayExpiry || null,
+        ovr_number: (c as any).ovr_number || (c as any).ovrNumber || null,
+        ovk_number: (c as any).ovk_number || (c as any).ovkNumber || null,
+        referral_code: (c as any).referral_code || (c as any).referralCode || `REF-${(c.surname || "GEM").slice(0, 3).toUpperCase()}${c.id.slice(-4).toUpperCase()}`,
+        vicidial_lead_id: (c as any).vicidial_lead_id || null,
+        owner_id: (c as any).owner_id || (c as any).ownerId,
+        next_action: (c as any).next_action || (c as any).nextAction || null,
+        next_action_date: (c as any).next_action_date || (c as any).nextActionDate || null,
+        last_contact_date: (c as any).last_contact_date || (c as any).lastContactDate || null,
+        status: c.status,
+        created_at: (c as any).created_at || (c as any).createdAt,
+      }));
 
       let acts = Array.from(mockStore.activities.values()).sort(
         (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -258,6 +286,7 @@ export const getWorkspaceDataFn = createServerFn({ method: "GET" })
         easypay_number: customers.easypayNumber,
         easypay_cycle: customers.easypayCycle,
         easypay_expiry: customers.easypayExpiry,
+        easypay_expiry_date: customers.easypayExpiry,
         referral_code: customers.referralCode,
         vicidial_lead_id: customers.vicidialLeadId,
         owner_id: customers.ownerId,
@@ -281,11 +310,6 @@ export const getWorkspaceDataFn = createServerFn({ method: "GET" })
       .orderBy(desc(customers.createdAt))
       .limit(1000);
 
-    const mappedCustomers = custRows.map((c) => ({
-      ...c,
-      full_name: c.full_name || `${c.first_name} ${c.surname}`.trim(),
-      created_at: c.created_at ? new Date(c.created_at).toISOString() : new Date().toISOString(),
-    }));
 
     const actRows = await db
       .select({
@@ -330,6 +354,21 @@ export const getWorkspaceDataFn = createServerFn({ method: "GET" })
       })
       .from(orders);
 
+    const orderMap = new Map(ordRows.map((o) => [o.customer_id, o]));
+    const mappedCustomers = custRows.map((c) => {
+      const ord = orderMap.get(c.id);
+      const generatedRef = `REF-${(c.surname || "GEM").slice(0, 3).toUpperCase()}${c.id.slice(-4).toUpperCase()}`;
+      return {
+        ...c,
+        referral_code: c.referral_code || generatedRef,
+        ovr_number: ord?.ovr_number || (c as any).ovr_number || null,
+        ovk_number: ord?.ovk_number || (c as any).ovk_number || null,
+        order_number: ord?.ovr_number || ord?.ovk_number || null,
+        full_name: c.full_name || `${c.first_name} ${c.surname}`.trim(),
+        created_at: c.created_at ? new Date(c.created_at).toISOString() : new Date().toISOString(),
+      };
+    });
+
     return {
       customers: mappedCustomers,
       activities: mappedActivities,
@@ -350,6 +389,7 @@ export const captureLeadFn = createServerFn({ method: "POST" })
       full_address?: string;
       product_package?: string;
       payment_type?: string;
+      referral_code?: string;
       next_action?: string;
       next_action_date?: string;
     }) => data
@@ -362,6 +402,7 @@ export const captureLeadFn = createServerFn({ method: "POST" })
     const norm = normalizeCell(cell);
     const fullName = `${data.first_name.trim()} ${data.surname.trim()}`;
     const nowIso = new Date().toISOString();
+    const newRefCode = `REF-${data.surname.trim().slice(0, 3).toUpperCase()}${Math.floor(1000 + Math.random() * 9000)}`;
 
     if (isMockMode()) {
       const existing = Array.from(mockStore.customers.values()).find(
@@ -387,6 +428,15 @@ export const captureLeadFn = createServerFn({ method: "POST" })
         areaSuburb: data.area_suburb?.trim() || null,
         productPackage: data.product_package || null,
         paymentType: data.payment_type || null,
+        easypayNumber: null,
+        easypayCycle: null,
+        easypayExpiry: null,
+        easypay_number: null,
+        easypay_cycle: null,
+        easypay_expiry: null,
+        easypay_expiry_date: null,
+        referralCode: newRefCode,
+        referral_code: newRefCode,
         ownerId: user.id,
         originalAgentId: user.id,
         teamLeaderId: null,
@@ -431,7 +481,9 @@ export const captureLeadFn = createServerFn({ method: "POST" })
         nextActionDate: data.next_action_date || null,
         escalationType: null,
         escalationReason: null,
-        notes: "Captured via agent form",
+        notes: data.referral_code
+          ? `Captured via agent form. Referred by customer code: ${data.referral_code}`
+          : "Captured via agent form",
         createdAt: nowIso,
       });
 
@@ -466,6 +518,7 @@ export const captureLeadFn = createServerFn({ method: "POST" })
         areaSuburb: data.area_suburb?.trim() || null,
         productPackage: data.product_package || null,
         paymentType: data.payment_type || null,
+        referralCode: newRefCode,
         ownerId: user.id,
         originalAgentId: user.id,
         createdBy: user.id,
@@ -485,7 +538,9 @@ export const captureLeadFn = createServerFn({ method: "POST" })
         actorId: user.id,
         actionType: "Lead captured",
         customerStatusAfter: "new_lead",
-        notes: "Captured in field workspace",
+        notes: data.referral_code
+          ? `Captured in field workspace. Referred by: ${data.referral_code}`
+          : "Captured in field workspace",
       }),
     ]);
 
@@ -525,6 +580,11 @@ export const logOutcomeFn = createServerFn({ method: "POST" })
       cust.nextActionDate = data.nextActionDate;
       cust.lastContactDate = today;
       cust.updatedAt = nowIso;
+      if (data.status === "activated" && !cust.referralCode) {
+        const code = `REF-${(cust.surname || "GEM").slice(0, 3).toUpperCase()}${cust.id.slice(-4).toUpperCase()}`;
+        cust.referralCode = code;
+        cust.referral_code = code;
+      }
 
       const actId = crypto.randomUUID();
       mockStore.activities.set(actId, {
@@ -549,15 +609,28 @@ export const logOutcomeFn = createServerFn({ method: "POST" })
     // Direct PostgreSQL
     const db = getDb();
 
+    const patchValues: Record<string, any> = {
+      status: data.status as any,
+      nextAction: data.nextAction,
+      nextActionDate: data.nextActionDate,
+      lastContactDate: today,
+      updatedAt: new Date(),
+    };
+
+    if (data.status === "activated") {
+      const [existingCust] = await db
+        .select({ id: customers.id, surname: customers.surname, referralCode: customers.referralCode })
+        .from(customers)
+        .where(eq(customers.id, data.customerId))
+        .limit(1);
+      if (existingCust && !existingCust.referralCode) {
+        patchValues.referralCode = `REF-${(existingCust.surname || "GEM").slice(0, 3).toUpperCase()}${existingCust.id.slice(-4).toUpperCase()}`;
+      }
+    }
+
     await db
       .update(customers)
-      .set({
-        status: data.status as any,
-        nextAction: data.nextAction,
-        nextActionDate: data.nextActionDate,
-        lastContactDate: today,
-        updatedAt: new Date(),
-      })
+      .set(patchValues)
       .where(eq(customers.id, data.customerId));
 
     await db.insert(activities).values({
@@ -575,7 +648,7 @@ export const logOutcomeFn = createServerFn({ method: "POST" })
   });
 
 // ----------------------------------------------------
-// AGILITY SYNC SERVER FUNCTIONS
+// CUSTOMER DETAILS UPDATE
 // ----------------------------------------------------
 
 export const updateCustomerFn = createServerFn({ method: "POST" })
@@ -590,6 +663,12 @@ export const updateCustomerFn = createServerFn({ method: "POST" })
       area_suburb?: string | null;
       product_package?: string | null;
       payment_type?: string | null;
+      easypay_number?: string | null;
+      easypay_cycle?: string | number | null;
+      easypay_expiry_date?: string | null;
+      easypay_expiry?: string | null;
+      ovr_number?: string | null;
+      ovk_number?: string | null;
     }) => data
   )
   .handler(async ({ data }) => {
@@ -610,6 +689,11 @@ export const updateCustomerFn = createServerFn({ method: "POST" })
       throw new Error("Choose a package from the list");
     }
 
+    const epNum = data.easypay_number?.trim() || null;
+    const epCycleRaw = data.easypay_cycle ? parseInt(String(data.easypay_cycle), 10) : null;
+    const epCycle = epCycleRaw !== null && !isNaN(epCycleRaw) ? epCycleRaw : null;
+    const epExpiry = (data.easypay_expiry_date || data.easypay_expiry)?.trim() || null;
+
     const patch = {
       firstName,
       surname,
@@ -620,6 +704,11 @@ export const updateCustomerFn = createServerFn({ method: "POST" })
       areaSuburb: data.area_suburb?.trim() || null,
       productPackage: pkg,
       paymentType: data.payment_type || null,
+      easypayNumber: epNum,
+      easypayCycle: epCycle,
+      easypayExpiry: epExpiry,
+      ovrNumber: data.ovr_number?.trim() || null,
+      ovkNumber: data.ovk_number?.trim() || null,
     };
     const nowIso = new Date().toISOString();
 
@@ -628,7 +717,22 @@ export const updateCustomerFn = createServerFn({ method: "POST" })
       if (!existing || (existing.ownerId !== user.id && user.role !== "admin")) {
         throw new Error("Customer not found");
       }
-      mockStore.customers.set(data.customerId, { ...existing, ...patch, updatedAt: nowIso });
+      mockStore.customers.set(data.customerId, {
+        ...existing,
+        ...patch,
+        easypayNumber: epNum,
+        easypayCycle: epCycle,
+        easypayExpiry: epExpiry,
+      ovrNumber: data.ovr_number?.trim() || null,
+      ovkNumber: data.ovk_number?.trim() || null,
+        easypay_number: epNum,
+        easypay_cycle: epCycle ? String(epCycle) : (data.easypay_cycle ? String(data.easypay_cycle) : null),
+        easypay_expiry: epExpiry,
+        easypay_expiry_date: epExpiry,
+        ovr_number: data.ovr_number?.trim() || null,
+        ovk_number: data.ovk_number?.trim() || null,
+        updatedAt: nowIso,
+      });
       const actId = crypto.randomUUID();
       mockStore.activities.set(actId, {
         id: actId,
@@ -645,6 +749,31 @@ export const updateCustomerFn = createServerFn({ method: "POST" })
         notes: "Customer details edited in call outcome",
         createdAt: nowIso,
       });
+
+      if (data.ovr_number !== undefined || data.ovk_number !== undefined) {
+        let ord = Array.from(mockStore.orders.values()).find((o) => o.customerId === data.customerId);
+        if (ord) {
+          if (data.ovr_number !== undefined) ord.ovrNumber = data.ovr_number?.trim() || null;
+          if (data.ovk_number !== undefined) ord.ovkNumber = data.ovk_number?.trim() || null;
+        } else if (data.ovr_number || data.ovk_number) {
+          const ordId = crypto.randomUUID();
+          mockStore.orders.set(ordId, {
+            id: ordId,
+            customerId: data.customerId,
+            externalOrderId: null,
+            orderDate: new Date().toISOString().slice(0, 10),
+            ovrNumber: data.ovr_number?.trim() || null,
+            ovkNumber: data.ovk_number?.trim() || null,
+            status: "pending",
+            nextAction: null,
+            actionDate: null,
+            source: "crm",
+            createdAt: nowIso,
+            updatedAt: nowIso,
+          });
+        }
+      }
+
       return { success: true };
     }
 
@@ -663,6 +792,32 @@ export const updateCustomerFn = createServerFn({ method: "POST" })
       .set({ ...patch, updatedAt: new Date() })
       .where(eq(customers.id, data.customerId));
 
+    if (data.ovr_number !== undefined || data.ovk_number !== undefined) {
+      const ovr = data.ovr_number?.trim() || null;
+      const ovk = data.ovk_number?.trim() || null;
+      const [existingOrder] = await db
+        .select({ id: orders.id })
+        .from(orders)
+        .where(eq(orders.customerId, data.customerId))
+        .limit(1);
+
+      if (existingOrder) {
+        await db
+          .update(orders)
+          .set({ ovrNumber: ovr, ovkNumber: ovk, updatedAt: new Date() })
+          .where(eq(orders.id, existingOrder.id));
+      } else if (ovr || ovk) {
+        await db.insert(orders).values({
+          customerId: data.customerId,
+          ovrNumber: ovr,
+          ovkNumber: ovk,
+          orderDate: new Date().toISOString().slice(0, 10),
+          status: "pending",
+          source: "crm",
+        });
+      }
+    }
+
     await db.insert(activities).values({
       customerId: data.customerId,
       actorId: user.id,
@@ -676,6 +831,10 @@ export const updateCustomerFn = createServerFn({ method: "POST" })
 
     return { success: true };
   });
+
+// ----------------------------------------------------
+// AGILITY SYNC SERVER FUNCTIONS
+// ----------------------------------------------------
 
 export const getAgilityBatchesFn = createServerFn({ method: "GET" }).handler(async () => {
   const user = await getCurrentUser();

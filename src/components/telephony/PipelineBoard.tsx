@@ -1,6 +1,6 @@
 import { LeadCard } from "./LeadCard";
 import type { Customer } from "./types";
-import { PIPELINE_STAGES } from "./pipeline-stages";
+import { PIPELINE_STAGES, stageForCustomer } from "./pipeline-stages";
 import type { KanbanDrag } from "./use-kanban-drag";
 
 interface PipelineBoardProps {
@@ -27,25 +27,28 @@ export function PipelineBoard({
   return (
     <div className="flex gap-3 overflow-x-auto pb-4">
       {PIPELINE_STAGES.map((stage) => {
-        const stageCustomers = customers.filter((c) => stage.statuses.includes(c.status));
+        const stageCustomers = customers.filter((c) => stageForCustomer(c).id === stage.id);
         const isOver = drag.overStageId === stage.id;
+        const Icon = stage.icon;
 
         return (
           <section
             key={stage.id}
             data-stage-id={stage.id}
-            className={`flex min-w-[240px] flex-1 flex-col rounded-xl border p-3 transition-all duration-200 ${
-              isOver ? "border-[#F5B021]/30 bg-[#F5B021]/5" : "border-white/5 bg-[#111111]"
+            className={`flex min-w-[260px] flex-1 flex-col rounded-xl border p-3 transition-all duration-200 ${
+              isOver ? "border-[#F5B021]/60 bg-[#F5B021]/10 shadow-[0_0_20px_rgba(245,176,33,0.15)]" : "border-white/5 bg-[#111111]"
             }`}
           >
             <header className="mb-3 flex items-center justify-between gap-2 px-2 pt-1">
               <div className="flex min-w-0 items-center gap-2">
-                <span className={`size-1.5 shrink-0 rounded-full ${stage.accent}`} />
-                <h3 className="truncate text-xs font-bold uppercase tracking-widest text-white/60">
+                <span className={`flex size-5 shrink-0 items-center justify-center rounded-md ${stage.tint} ${stage.text}`}>
+                  <Icon className="size-3.5" />
+                </span>
+                <h3 className="truncate text-xs font-bold uppercase tracking-widest text-white/80">
                   {stage.title}
                 </h3>
               </div>
-              <span className="min-w-6 rounded-full bg-white/5 px-2 py-0.5 text-center text-xs font-bold tabular-nums text-white/50">
+              <span className="min-w-6 rounded-full bg-white/5 px-2 py-0.5 text-center text-xs font-bold tabular-nums text-white/60">
                 {stageCustomers.length}
               </span>
             </header>

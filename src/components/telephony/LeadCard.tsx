@@ -1,6 +1,7 @@
 import React from "react";
 import { Phone, PhoneOff, MessageSquare, Copy, CalendarClock, AlertTriangle, Clock, PhoneCall, Radio } from "lucide-react";
 import { toast } from "sonner";
+import { copyToClipboard } from "@/lib/utils";
 import type { Customer } from "./types";
 import { formatCallTime } from "./telephony-service";
 
@@ -59,7 +60,7 @@ export function LeadCard({
 
   const copyPhone = (e: React.MouseEvent) => {
     e.stopPropagation();
-    navigator.clipboard.writeText(customer.cell_number);
+    void copyToClipboard(customer.cell_number);
     toast.success("Copied", { description: customer.cell_number });
   };
 
@@ -163,6 +164,14 @@ export function LeadCard({
         <div className="mt-2 flex items-center gap-1.5 text-[11px] text-white/30">
           <CalendarClock className="size-3 shrink-0" />
           <span className="truncate">{customer.next_action}</span>
+        </div>
+      )}
+
+      {/* Activated Referral Prompt */}
+      {customer.status === "activated" && (
+        <div className="mt-2 flex items-center justify-between gap-1.5 text-[10px] font-semibold text-[#22C55E] bg-[#22C55E]/10 rounded-md px-2 py-0.5 border border-[#22C55E]/20">
+          <span>Activated · Ask Referrals</span>
+          <span className="font-mono text-white/90">{customer.referral_code || "REF"}</span>
         </div>
       )}
 

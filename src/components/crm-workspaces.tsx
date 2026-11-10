@@ -36,7 +36,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { QuickDialDialog } from "./telephony/QuickDialDialog";
 import { OutcomeCustomerDetails } from "./telephony/OutcomeCustomerDetails";
-import { OUTCOMES, outcomeFor, statusForOutcome } from "./telephony/pipeline-stages";
+import { OUTCOMES, outcomeFor, statusForOutcome, stageForCustomer, stageForOutcome } from "./telephony/pipeline-stages";
 import { PRODUCT_PACKAGES } from "./telephony/types";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -57,7 +57,7 @@ import { AgentLeadsView } from "./agent-leads";
 import { CustomerDrawer } from "./telephony/CustomerDrawer";
 import { ViciDialSimulator } from "./telephony/ViciDialSimulator";
 import { SoftphoneBar } from "./telephony/SoftphoneBar";
-import { dialCustomerApi, updateStageApi, type DialResult } from "./telephony/telephony-service";
+import { dialCustomerApi, hangupCallApi, updateStageApi, type DialResult } from "./telephony/telephony-service";
 import type { AgentTelephonyState, Customer } from "./telephony/types";
 
 type ActivityRow = {
@@ -110,11 +110,11 @@ const dateAdd = (date: string, days: number) => {
 const dateText = (date?: string | null) =>
   date
     ? new Intl.DateTimeFormat("en-ZA", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        timeZone: "UTC",
-      }).format(new Date(`${date.slice(0, 10)}T12:00:00Z`))
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      timeZone: "UTC",
+    }).format(new Date(`${date.slice(0, 10)}T12:00:00Z`))
     : "—";
 
 const norm = (value: string) => {
@@ -184,7 +184,30 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
     callDurationSeconds: 0,
     isMuted: false,
     isOnHold: false,
+    outcomeLoggedForCall: false,
   });
+
+  const [referralContext, setReferralContext] = useState<{
+    referralCode?: string;
+    customerName?: string;
+  } | null>(null);
+
+  const handleCaptureReferral = (cust: Customer) => {
+    setReferralContext({
+      referralCode: cust.referral_code || undefined,
+      customerName: cust.full_name || `${cust.first_name} ${cust.surname}`, 
+    });
+    setLeadOpen(true);
+  };
+
+  const handleOutcomeLogged = (customerId: string) => {
+    if (telephonyState.activeCustomerId === customerId) {
+      setTelephonyState((prev) => ({
+        ...prev,
+        outcomeLoggedForCall: true,
+      }));
+    }
+  };
 
   const handleQuickDialed = (phone: string, match: DialResult) => {
     setTelephonyState((prev) => ({
@@ -197,13 +220,14 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
       callDurationSeconds: 0,
       isMuted: false,
       isOnHold: false,
+      outcomeLoggedForCall: false,
     }));
   };
 
-  
-  // Auto-tick live call duration
+
+  // Auto-tick live call duration ONLY when the call is actually answered/connected (NOT during ringing)
   useEffect(() => {
-    if (telephonyState.agentStatus !== "in_call") return;
+    if (telephonyState.agentStatus !== "in_call" || telephonyState.callProgress !== "connected") return;
     const interval = setInterval(() => {
       setTelephonyState((prev) => ({
         ...prev,
@@ -211,7 +235,7 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
       }));
     }, 1000);
     return () => clearInterval(interval);
-  }, [telephonyState.agentStatus]);
+  }, [telephonyState.agentStatus, telephonyState.callProgress]);
 
   // Handle instant lead update & sync with React Query cache
   const handleCustomerUpdated = (updated: any) => {
@@ -225,7 +249,7 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
     });
   };
 
-  
+
   const handleTriggerViciCall = (simCustomer: Customer) => {
     // Optimistically add to customers list in cache if not present
     qc.setQueryData(["crm-workspace"], (old: any) => {
@@ -251,6 +275,7 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
       callDurationSeconds: 0,
       isMuted: false,
       isOnHold: false,
+      outcomeLoggedForCall: false,
     }));
   };
 
@@ -260,15 +285,44 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
 
   const placeCall = async (customer: Customer) => {
     const name = customer.full_name || `${customer.first_name} ${customer.surname}`;
-    
-    // Immediately open modal and select this customer
+
+    // Select customer & open details drawer
     setDrawerCustomer(customer);
     setDrawerOpen(true);
 
-    // Immediately enter live call state with live timer and recording
+    const rawDigits = (customer.cell_number || "").replace(/\D/g, "");
+    const isPossibleSaPhone =
+      (rawDigits.length === 10 && rawDigits.startsWith("0")) ||
+      (rawDigits.length === 11 && rawDigits.startsWith("27"));
+    const isDummy = rawDigits.length >= 10 && new Set(rawDigits.slice(-9)).size <= 2;
+
+    // Check if the number format is invalid or dummy
+    if (!isPossibleSaPhone || isDummy) {
+      setTelephonyState((prev) => ({
+        ...prev,
+        agentStatus: "in_call",
+        callProgress: "does_not_exist",
+        callErrorReason: `Number '${customer.cell_number}' is invalid or unallocated in South Africa.`,
+        activeCustomerId: customer.id,
+        activeCustomerName: name,
+        activeCustomerPhone: customer.cell_number,
+        callDurationSeconds: 0,
+        isMuted: false,
+        isOnHold: false,
+        outcomeLoggedForCall: false,
+      }));
+      toast.error("Number does not exist", {
+        description: `'${customer.cell_number}' is not a valid allocated phone number.`,
+      });
+      return;
+    }
+
+    // Immediately enter RINGING state
     setTelephonyState((prev) => ({
       ...prev,
       agentStatus: "in_call",
+      callProgress: "ringing",
+      callErrorReason: null,
       pauseCode: null,
       activeCustomerId: customer.id,
       activeCustomerName: name,
@@ -276,45 +330,111 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
       callDurationSeconds: 0,
       isMuted: false,
       isOnHold: false,
+      outcomeLoggedForCall: false,
     }));
 
-    toast.success(`📞 Live Call Connected: ${name}`, {
-      description: `Dialed ${customer.cell_number} · Audio Auto-Recording Active`,
+    toast.info(`🔔 Dialing ${name}...`, {
+      description: `Sending call to phone session for ${customer.cell_number}...`,
     });
 
-    // Try backend call in background without blocking UI
-    try {
-      await dialCustomerApi(customer.id, customer.cell_number, name);
-    } catch {
-      // Backend not yet configured
+    const ok = await dialCustomerApi(customer.id, customer.cell_number, name);
+    if (!ok) {
+      // Backend reported an error or session not active: reset state cleanly
+      setTelephonyState((prev) => ({
+        ...prev,
+        agentStatus: "ready",
+        callProgress: null,
+        callErrorReason: null,
+      }));
+      return;
     }
-  };
 
-  const handleHangup = () => {
+    // Call dispatched to PBX: keep state in RINGING until picked up by the customer
     setTelephonyState((prev) => ({
       ...prev,
-      agentStatus: "ready",
-      activeCustomerId: null,
-      activeCustomerName: null,
-      activeCustomerPhone: null,
+      callProgress: "ringing",
       callDurationSeconds: 0,
-      isMuted: false,
-      isOnHold: false,
     }));
-    toast.info("Call ended / dropped");
+
+    toast.info(`🔔 Ringing ${name}...`, {
+      description: `Dialed ${customer.cell_number} · Waiting for customer to answer...`,
+    });
   };
 
-  const handleMoveCustomer = async (customerId: string, targetStatus: string) => {
+  const handleHangup = async () => {
+    await hangupCallApi();
+    setTelephonyState((prev) => {
+      const outcomeAlreadyLogged = Boolean(prev.outcomeLoggedForCall);
+      if (outcomeAlreadyLogged) {
+        toast.info("Call ended.");
+        return {
+          ...prev,
+          agentStatus: "ready",
+          callProgress: null,
+          callErrorReason: null,
+          isOnHold: false,
+          isMuted: false,
+          callDurationSeconds: 0,
+          activeCustomerId: null,
+          activeCustomerName: null,
+          activeCustomerPhone: null,
+          outcomeLoggedForCall: false,
+        };
+      } else {
+        toast.info("Call ended. Choose an outcome to continue.");
+        return {
+          ...prev,
+          agentStatus: "ready",
+          callProgress: null,
+          callErrorReason: null,
+          isOnHold: false,
+          isMuted: false,
+          callDurationSeconds: 0,
+        };
+      }
+    });
+  };
+
+  const handleMoveCustomer = async (
+    customerId: string,
+    targetStatus: string,
+    options?: {
+      nextActionDate?: string | null;
+      nextAction?: string | null;
+      notes?: string | null;
+      outcome?: string | null;
+    },
+  ) => {
     qc.setQueryData(["crm-workspace", mode], (old: any) => {
       if (!old?.customers) return old;
       return {
         ...old,
         customers: old.customers.map((c: any) =>
-          c.id === customerId ? { ...c, status: targetStatus } : c,
+          c.id === customerId
+            ? {
+              ...c,
+              status: targetStatus,
+              next_action: options?.nextAction ?? c.next_action,
+              next_action_date: options?.nextActionDate ?? c.next_action_date,
+            }
+            : c,
         ),
       };
     });
-    await updateStageApi(customerId, targetStatus);
+    if (options) {
+      await logOutcomeFn({
+        data: {
+          customerId,
+          outcome: options.outcome || "Stage Changed",
+          status: targetStatus,
+          nextAction: options.nextAction || null,
+          nextActionDate: options.nextActionDate || null,
+          notes: options.notes || `Pipeline moved to ${targetStatus}`,
+        },
+      });
+    } else {
+      await updateStageApi(customerId, targetStatus);
+    }
     refresh();
   };
 
@@ -376,32 +496,32 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
   const navigation =
     mode === "agent"
       ? [
-          { id: "kanban", label: "Pipeline Command", icon: LayoutGrid },
-          { id: "callbacks", label: "Today's Call Backs", icon: Phone },
-          { id: "leads", label: "My Leads", icon: Users },
-          { id: "worklist", label: "All Assigned Leads", icon: ClipboardList },
-          { id: "newlead", label: "New Lead Capture", icon: Plus },
-          { id: "activity", label: "My Activity Log", icon: Activity },
-        ]
+        { id: "kanban", label: "Pipeline Command", icon: LayoutGrid },
+        { id: "callbacks", label: "Today's Call Backs", icon: Phone },
+        { id: "leads", label: "My Leads", icon: Users },
+        { id: "worklist", label: "All Assigned Leads", icon: ClipboardList },
+        { id: "newlead", label: "New Lead Capture", icon: Plus },
+        { id: "activity", label: "My Activity Log", icon: Activity },
+      ]
       : [
-          { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-          { id: "callbacks", label: "Call Back Reports", icon: Phone },
-          { id: "grid", label: "Master Grid", icon: ClipboardList },
-          { id: "sync", label: "Agility Sync", icon: RefreshCw },
-          { id: "agents", label: "Manage Agents", icon: Users },
-        ];
+        { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+        { id: "callbacks", label: "Call Back Reports", icon: Phone },
+        { id: "grid", label: "Master Grid", icon: ClipboardList },
+        { id: "sync", label: "Agility Sync", icon: RefreshCw },
+        { id: "agents", label: "Manage Agents", icon: Users },
+      ];
 
   const heading =
     mode === "admin"
       ? (
-          {
-            dashboard: "Command Centre",
-            callbacks: "Call Back Accountability",
-            grid: "Master Lead & Order Grid",
-            sync: "Agility Sync",
-            agents: "Manage Agents",
-          } as Record<string, string>
-        )[view]
+        {
+          dashboard: "Command Centre",
+          callbacks: "Call Back Accountability",
+          grid: "Master Lead & Order Grid",
+          sync: "Agility Sync",
+          agents: "Manage Agents",
+        } as Record<string, string>
+      )[view]
       : view === "kanban"
         ? "Pipeline"
         : "Daily Execution Command";
@@ -428,9 +548,8 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
         />
       )}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-white/5 bg-[#0e0e0e] transition-transform lg:translate-x-0 ${
-          menu ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-white/5 bg-[#0e0e0e] transition-transform lg:translate-x-0 ${menu ? "translate-x-0" : "-translate-x-full"
+          }`}
       >
         <div className="flex h-[68px] items-center justify-between border-b border-white/5 px-5">
           <div className="flex items-center gap-3">
@@ -511,16 +630,6 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {mode === "agent" && (
-              <button
-                type="button"
-                onClick={() => setViciSimOpen(true)}
-                className="flex h-9 items-center gap-1.5 rounded-lg border border-[#F5B021]/60 bg-[#F5B021]/20 px-3.5 text-xs font-bold text-[#F5B021] shadow-lg shadow-[#F5B021]/20 transition hover:bg-[#F5B021]/30 hover:scale-105 active:scale-95"
-              >
-                <Radio className="size-3.5 animate-pulse text-[#F5B021]" />
-                <span>⚡ Demo ViciDial Call</span>
-              </button>
-            )}
             <Button
               variant="outline"
               size="icon"
@@ -571,7 +680,7 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
                 queue={queue}
                 customers={customers as any}
                 today={today}
-                activeDialingId={telephonyState.activeCustomerId}
+                activeDialingId={telephonyState.agentStatus === "in_call" || telephonyState.agentStatus === "dialing" ? telephonyState.activeCustomerId : null}
                 callDurationSeconds={telephonyState.callDurationSeconds}
                 onSelectCustomer={(c) => {
                   setDrawerCustomer(c as any);
@@ -667,18 +776,35 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
         customer={selected}
         today={today}
         onClose={() => setSelected(null)}
-        onSaved={openNextQueued}
+        onSaved={(id) => {
+          handleOutcomeLogged(id);
+          openNextQueued(id);
+        }}
       />
       {leadOpen && (
-        <Dialog open onOpenChange={setLeadOpen}>
-          <DialogContent>
+        <Dialog
+          open
+          modal={false}
+          onOpenChange={(open) => {
+            setLeadOpen(open);
+            if (!open) setReferralContext(null);
+          }}
+        >
+          <DialogContent
+            hideOverlay
+            onInteractOutside={(e) => e.preventDefault()}
+            className="max-h-[90vh] overflow-y-auto sm:max-w-2xl pointer-events-auto border border-white/10 bg-[#141414] shadow-2xl"
+          >
             <DialogHeader>
               <DialogTitle>New lead</DialogTitle>
             </DialogHeader>
             <LeadForm
               customers={customers}
+              initialReferralCode={referralContext?.referralCode}
+              referringCustomerName={referralContext?.customerName}
               onDone={() => {
                 setLeadOpen(false);
+                setReferralContext(null);
                 refresh();
               }}
               onExisting={setSelected}
@@ -697,12 +823,23 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
             telephonyState={telephonyState}
             setTelephonyState={setTelephonyState}
             onOpenDial={() => setDialOpen(true)}
-            onDispositionComplete={openNextQueued}
+            onDispositionComplete={(id) => {
+              handleOutcomeLogged(id);
+              openNextQueued(id);
+            }}
             activeCustomer={customers.find((c) => c.id === telephonyState.activeCustomerId) ?? null}
             onLogOutcome={() => {
               const active = customers.find((c) => c.id === telephonyState.activeCustomerId);
               if (active) setSelected(active);
             }}
+            onOpenCustomerDetails={() => {
+              const active = customers.find((c) => c.id === telephonyState.activeCustomerId);
+              if (active) {
+                setDrawerCustomer(active);
+                setDrawerOpen(true);
+              }
+            }}
+            onCaptureReferral={handleCaptureReferral}
           />
           <CustomerDrawer
             customer={drawerCustomer as any}
@@ -710,7 +847,17 @@ export function CrmWorkspace({ mode }: { mode: WorkspaceMode }) {
             isOpen={drawerOpen}
             onClose={() => setDrawerOpen(false)}
             onCall={handleCall}
+            onHangup={handleHangup}
+            isCallActive={
+              Boolean(
+                (telephonyState.agentStatus === "in_call" || telephonyState.agentStatus === "dialing") &&
+                drawerCustomer &&
+                telephonyState.activeCustomerId === drawerCustomer.id
+              )
+            }
             onRefreshData={refresh}
+            onCaptureReferral={handleCaptureReferral}
+            onOutcomeLogged={handleOutcomeLogged}
           />
         </>
       )}
@@ -949,12 +1096,17 @@ function LeadForm({
   customers,
   onDone,
   onExisting,
+  initialReferralCode,
+  referringCustomerName,
 }: {
   customers: Customer[];
   onDone: () => void;
   onExisting: (customer: Customer) => void;
+  initialReferralCode?: string | null;
+  referringCustomerName?: string | null;
 }) {
   const [busy, setBusy] = useState(false);
+
   const today = jhbDate();
 
   async function submit(e: FormEvent<HTMLFormElement>) {
@@ -982,6 +1134,7 @@ function LeadForm({
           full_address: String(v.get("full_address") ?? ""),
           product_package: String(v.get("product_package") ?? ""),
           payment_type: String(v.get("payment_type") ?? ""),
+          referral_code: String(v.get("referral_code") ?? "").trim() || undefined,
           next_action: String(v.get("next_action") ?? ""),
           next_action_date: String(v.get("next_action_date") ?? ""),
         },
@@ -997,7 +1150,26 @@ function LeadForm({
 
   return (
     <form onSubmit={submit} className="max-w-4xl space-y-6">
-      <h2 className="text-xl font-bold">New Lead Capture</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold">New Lead Capture</h2>
+        {initialReferralCode && (
+          <span className="rounded-full bg-[#22C55E]/15 border border-[#22C55E]/30 px-3 py-1 text-xs font-bold text-[#22C55E]">
+            Referral Lead
+          </span>
+        )}
+      </div>
+
+      {referringCustomerName && (
+        <div className="rounded-xl border border-[#22C55E]/30 bg-[#22C55E]/10 p-3 text-xs text-white/90 space-y-1">
+          <p className="font-semibold text-[#22C55E]">
+            🎁 Referred by: {referringCustomerName}
+          </p>
+          <p className="text-[11px] text-white/70">
+            Referral code <span className="font-mono text-white font-bold">{initialReferralCode}</span> will be attached to this lead.
+          </p>
+        </div>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="First name" name="first_name" required />
         <Field label="Surname" name="surname" required />
@@ -1005,6 +1177,12 @@ function LeadForm({
         <Field label="Email" name="email" type="email" />
         <Field label="Area / Suburb" name="area_suburb" />
         <Field label="Full address" name="full_address" />
+        <Field
+          label="Referral Code (Optional)"
+          name="referral_code"
+          defaultValue={initialReferralCode || ""}
+          placeholder="e.g. REF-MOK1001"
+        />
         <div>
           <Label htmlFor="product_package">Product package</Label>
           <select
@@ -1059,27 +1237,50 @@ function OutcomeDialog({
   onSaved: (customerId: string) => void;
 }) {
   const [busy, setBusy] = useState(false);
+  const [selectedOutcome, setSelectedOutcome] = useState("PAYMENT_PROMISED");
+  const [nextActionDate, setNextActionDate] = useState("");
+  const [outcomeNotes, setOutcomeNotes] = useState("");
+
+  // Sync outcome on customer change
+  useEffect(() => {
+    if (customer) {
+      setSelectedOutcome("PAYMENT_PROMISED");
+      setNextActionDate("");
+      setOutcomeNotes("");
+    }
+  }, [customer?.id]);
+
+  const currentStage = stageForCustomer(customer);
+
+  const targetStage = customer ? stageForOutcome(selectedOutcome, customer.status) : null;
+  const needsDate = !!(outcomeFor(selectedOutcome)?.dateRequired) && selectedOutcome !== "ACTIVATED";
 
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!customer) return;
     setBusy(true);
-    const v = new FormData(e.currentTarget);
-    const outcome = String(v.get("outcome"));
-    const needsDate = outcomeFor(outcome)?.dateRequired ?? false;
-    if (needsDate && !v.get("next_action_date")) {
+    if (needsDate && !nextActionDate) {
       toast.error("Pick a next action date");
       setBusy(false);
       return;
     }
+    const outcome = selectedOutcome;
     const status = statusForOutcome(outcome, customer.status);
-
+    const outcomeObj = outcomeFor(outcome);
     const nextDate =
       outcome === "ACTIVATED"
         ? dateAdd(today, 7)
         : needsDate
-          ? String(v.get("next_action_date"))
+          ? nextActionDate
           : null;
+    const nextAction =
+      outcomeObj && "nextAction" in outcomeObj
+        ? (outcomeObj as any).nextAction as string
+        : outcome === "ACTIVATED"
+          ? "After-Sales Call"
+          : outcome === "NI" || outcome === "DNC"
+            ? "No Further Action"
+            : "Customer Callback";
 
     try {
       await logOutcomeFn({
@@ -1088,13 +1289,8 @@ function OutcomeDialog({
           outcome,
           status,
           nextActionDate: nextDate,
-          nextAction:
-            outcome === "ACTIVATED"
-              ? "After-Sales Call"
-              : outcome === "NI" || outcome === "DNC"
-                ? "No Further Action"
-                : "Customer Callback",
-          notes: String(v.get("notes") || "") || null,
+          nextAction,
+          notes: outcomeNotes.trim() || null,
         },
       });
       toast.success("Outcome saved");
@@ -1110,25 +1306,58 @@ function OutcomeDialog({
   return (
     <Dialog
       open={Boolean(customer)}
+      modal={false}
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
     >
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent
+        hideOverlay
+        onInteractOutside={(e) => e.preventDefault()}
+        className="max-h-[90vh] overflow-y-auto sm:max-w-2xl pointer-events-auto border border-white/10 bg-[#141414] shadow-2xl"
+      >
         <DialogHeader>
           <DialogTitle>Log Call Outcome</DialogTitle>
-          <DialogDescription>
-            {customer?.full_name} · {customer?.cell_number}
+          <DialogDescription className="flex flex-wrap items-center gap-2">
+            <span className="font-semibold">{customer?.full_name}</span>
+            <span className="text-muted-foreground">📞 {customer?.cell_number}</span>
+            {currentStage && (
+              <span className={"ml-auto inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold " + (currentStage.tint || "") + " " + (currentStage.text || "")}>
+                {currentStage.title}
+              </span>
+            )}
+            {targetStage && targetStage.id !== currentStage?.id && (
+              <>
+                <span className="text-muted-foreground">→</span>
+                <span className={"inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold " + (targetStage.tint || "") + " " + (targetStage.text || "")}>
+                  {targetStage.title}
+                </span>
+              </>
+            )}
           </DialogDescription>
         </DialogHeader>
         {customer && <OutcomeCustomerDetails key={customer.id} customer={customer} />}
+        {customer && (customer.status === "activated" || selectedOutcome === "ACTIVATED") && (
+          <div className="rounded-xl border border-[#22C55E]/40 bg-[#22C55E]/10 p-3 text-xs space-y-1">
+            <p className="font-bold text-[#22C55E] flex items-center justify-between">
+              <span>🎁 Activated Customer · Referral Prompt</span>
+              <span className="font-mono bg-black/50 px-2 py-0.5 rounded border border-[#22C55E]/30 text-white font-semibold">
+                {customer.referral_code || "REF-ACTIVE"}
+              </span>
+            </p>
+            <p className="text-white/80">
+              Prompt the customer: <em>"Who else among your friends, family or neighbours would be interested in fibre?"</em>
+            </p>
+          </div>
+        )}
         <form onSubmit={submit} className="space-y-4">
           <div>
-            <Label htmlFor="outcome">Outcome</Label>
+            <Label htmlFor="outcome-sel">Outcome</Label>
             <select
-              id="outcome"
-              name="outcome"
-              className="mt-1 h-10 w-full border border-input bg-background px-3"
+              id="outcome-sel"
+              value={selectedOutcome}
+              onChange={(e) => setSelectedOutcome(e.target.value)}
+              className="mt-1 h-10 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground"
             >
               {OUTCOMES.map((o) => (
                 <option key={o.code} value={o.code}>
@@ -1137,13 +1366,37 @@ function OutcomeDialog({
               ))}
             </select>
           </div>
-          <Field label="Next callback date" name="next_action_date" type="date" min={today} />
+          {needsDate && (
+            <div>
+              <Label htmlFor="nxt-date">
+                {selectedOutcome === "PAYMENT_PROMISED" || selectedOutcome === "SALE"
+                  ? "Payment promised by"
+                  : "Next callback / action date"}
+              </Label>
+              <Input
+                id="nxt-date"
+                type="date"
+                min={today}
+                value={nextActionDate}
+                onChange={(e) => setNextActionDate(e.target.value)}
+                required
+                className="mt-1 h-10"
+              />
+              {(selectedOutcome === "PAYMENT_PROMISED" || selectedOutcome === "SALE") && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  A follow-up task will appear in your queue on this date.
+                </p>
+              )}
+            </div>
+          )}
           <div>
             <Label htmlFor="outcome_notes">Notes</Label>
             <textarea
               id="outcome_notes"
-              name="notes"
-              className="mt-1 min-h-24 w-full border border-input bg-background p-3"
+              value={outcomeNotes}
+              onChange={(e) => setOutcomeNotes(e.target.value)}
+              placeholder="Optional call notes�"
+              className="mt-1 min-h-20 w-full rounded-lg border border-input bg-background p-3 text-sm text-foreground"
             />
           </div>
           <DialogFooter>
@@ -1151,7 +1404,7 @@ function OutcomeDialog({
               Cancel
             </Button>
             <Button type="submit" disabled={busy}>
-              {busy ? "Saving…" : "Save outcome"}
+              {busy ? "Saving�" : "Save outcome"}
             </Button>
           </DialogFooter>
         </form>

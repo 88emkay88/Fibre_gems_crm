@@ -21,7 +21,7 @@ export type RemiResult<T> =
 const DIAL_TIMEOUT_MS = 10_000;
 
 export function remiApiUrl(): string | null {
-  const raw = process.env["REMI_API_URL"] || process.env["VICIDIAL_API_URL"] || "";
+  const raw = process.env["REMI_API_URL"] || process.env["VICIDIAL_API_URL"] || "http://127.0.0.1:8000";
   return raw.replace(/\/+$/, "") || null;
 }
 

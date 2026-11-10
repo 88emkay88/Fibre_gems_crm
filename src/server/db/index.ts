@@ -54,6 +54,19 @@ export interface MockCustomer {
   areaSuburb: string | null;
   productPackage: string | null;
   paymentType: string | null;
+  easypayNumber?: string | null;
+  easypayCycle?: number | string | null;
+  easypayExpiry?: string | null;
+  easypay_number?: string | null;
+  easypay_cycle?: number | string | null;
+  easypay_expiry?: string | null;
+  easypay_expiry_date?: string | null;
+  ovrNumber?: string | null;
+  ovkNumber?: string | null;
+  ovr_number?: string | null;
+  ovk_number?: string | null;
+  referralCode?: string | null;
+  referral_code?: string | null;
   ownerId: string;
   originalAgentId: string;
   teamLeaderId: string | null;
@@ -171,6 +184,19 @@ const initialCustomers = new Map<string, MockCustomer>([
       areaSuburb: "Soweto",
       productPackage: "Vuma Reach 20Mbps/10Mbps",
       paymentType: "EasyPay",
+      easypayNumber: "91234567890",
+      easypayCycle: 1,
+      easypayExpiry: "2026-12-31",
+      easypay_number: "91234567890",
+      easypay_cycle: "1",
+      easypay_expiry: "2026-12-31",
+      easypay_expiry_date: "2026-12-31",
+      ovrNumber: "OVR-849201",
+      ovkNumber: "OVK-552194",
+      ovr_number: "OVR-849201",
+      ovk_number: "OVK-552194",
+      referralCode: "REF-MOK1001",
+      referral_code: "REF-MOK1001",
       ownerId: AGENT_ID,
       originalAgentId: AGENT_ID,
       teamLeaderId: null,
@@ -200,11 +226,58 @@ const initialCustomers = new Map<string, MockCustomer>([
       areaSuburb: "Orlando West",
       productPackage: "Vuma Reach 50Mbps/25Mbps",
       paymentType: "Prepaid",
+      easypayNumber: null,
+      easypayCycle: null,
+      easypayExpiry: null,
+      easypay_number: null,
+      easypay_cycle: null,
+      easypay_expiry: null,
+      easypay_expiry_date: null,
+      referralCode: "REF-ZUL1002",
+      referral_code: "REF-ZUL1002",
       ownerId: AGENT_ID,
       originalAgentId: AGENT_ID,
       teamLeaderId: null,
       status: "payment_pending",
       nextAction: "Payment follow-up",
+      nextActionDate: new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Johannesburg", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()),
+      lastContactDate: new Date().toISOString().slice(0, 10),
+      createdBy: AGENT_ID,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+  ],
+  [
+    "c1111111-0000-0000-0000-000000000003",
+    {
+      id: "c1111111-0000-0000-0000-000000000003",
+      externalCustomerId: "CUS-1003",
+      recordStatus: "active",
+      firstName: "Bongani",
+      surname: "Khumalo",
+      fullName: "Bongani Khumalo",
+      cellNumber: "0845551234",
+      normalizedCell: "27845551234",
+      alternateCellNumber: null,
+      email: "bongani@example.com",
+      fullAddress: "12 Meadowlands Zone 2, Soweto",
+      areaSuburb: "Meadowlands",
+      productPackage: "Vuma Reach 50Mbps/25Mbps",
+      paymentType: "Debit Order",
+      easypayNumber: null,
+      easypayCycle: null,
+      easypayExpiry: null,
+      easypay_number: null,
+      easypay_cycle: null,
+      easypay_expiry: null,
+      easypay_expiry_date: null,
+      referralCode: "REF-KHU1003",
+      referral_code: "REF-KHU1003",
+      ownerId: AGENT_ID,
+      originalAgentId: AGENT_ID,
+      teamLeaderId: null,
+      status: "activated",
+      nextAction: "After-Sales Referral Call",
       nextActionDate: new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Johannesburg", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()),
       lastContactDate: new Date().toISOString().slice(0, 10),
       createdBy: AGENT_ID,
