@@ -197,24 +197,23 @@ The backend (`FibreGemsAPI`) exposes these endpoints for the Team Lead Portal. L
 * `GET /api/v1/supervisor/recordings?agent_id=...&disposition=...&date_from=...&date_to=...`
   - **Response:**
     ```json
-    [
-      {
-        "id": "c71a3964-6d9b-4e1a-85d0-9a4f652b1234",
-        "agent_name": "Mukona Tshifhiwa",
-        "customer_name": "Lerato Ndlovu",
-        "customer_phone": "0823456789",
-        "disposition": "SALE",
-        "duration_seconds": 245,
-        "recorded_at": "2026-11-12T10:15:00Z",
-        "recording_url": "http://10.0.0.132/RECORDINGS/MP3/20261112-101500_0823456789.mp3",
-        "qa_evaluation": {
-          "status": "graded",
-          "score_percent": 90,
-          "reviewer": "Team Lead Sarah",
-          "feedback": "Great objection handling on price."
+    {
+      "total": 5,
+      "recordings": [
+        {
+          "id": "c71a3964-6d9b-4e1a-85d0-9a4f652b1234",
+          "agent_name": "Mukona Tshifhiwa",
+          "customer_name": "Lerato Ndlovu",
+          "customer_phone": "0823456789",
+          "disposition": "SALE",
+          "duration_seconds": 245,
+          "recorded_at": "2026-11-12T10:15:00Z",
+          "recording_url": "http://10.0.0.132/RECORDINGS/MP3/20261110-212526_842840069_fg_api-all.mp3",
+          "qa_status": "pending",
+          "qa_evaluation": null
         }
-      }
-    ]
+      ]
+    }
     ```
 * `POST /api/v1/supervisor/recordings/{recording_id}/evaluate`
   - **Payload:**
@@ -226,6 +225,30 @@ The backend (`FibreGemsAPI`) exposes these endpoints for the Team Lead Portal. L
       "compliance_verified": true,
       "closing_score": 4,
       "feedback_notes": "Very confident delivery, good pace."
+    }
+    ```
+
+### 5. Agent Leaderboard & Shift Performance Stats
+* `GET /api/v1/supervisor/stats/agents?date_from=YYYY-MM-DD&date_to=YYYY-MM-DD`
+  - **Response:**
+    ```json
+    {
+      "period": { "from": "2026-11-12", "to": "2026-11-12" },
+      "agents_count": 2,
+      "leaderboard": [
+        {
+          "agent_id": "cc2d8f72-6728-4289-a765-ab4f26943801",
+          "agent_code": "AGT286",
+          "full_name": "MUKONA",
+          "total_dials": 21,
+          "answers_count": 14,
+          "sales_count": 3,
+          "conversion_rate_pct": 14.3,
+          "talk_time_seconds": 3840,
+          "talk_time_formatted": "01:04:00",
+          "avg_qa_score": 92.5
+        }
+      ]
     }
     ```
 
