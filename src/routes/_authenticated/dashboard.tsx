@@ -5,7 +5,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
   beforeLoad: async () => {
     const res = await getCurrentUserFn();
     const role = res?.user?.role;
-    throw redirect({ to: role === "admin" ? "/admin" : "/agent" });
+    throw redirect({ to: role === "admin" ? "/admin" : role === "team_leader" ? "/team-lead" : "/agent" });
   },
   head: () => ({
     meta: [
