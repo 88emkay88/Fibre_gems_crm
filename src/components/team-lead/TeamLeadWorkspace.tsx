@@ -2,11 +2,13 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { CallbackPoolView } from "./CallbackPoolView";
 import { LiveFloorMonitor } from "./LiveFloorMonitor";
+import { RecordingsQAView } from "./RecordingsQAView";
 
-type Section = "floor" | "callbacks";
+type Section = "floor" | "recordings" | "callbacks";
 
 const SECTIONS: { id: Section; label: string }[] = [
   { id: "floor", label: "Live floor" },
+  { id: "recordings", label: "Recordings & QA" },
   { id: "callbacks", label: "Callback pool" },
 ];
 
@@ -44,7 +46,9 @@ export function TeamLeadWorkspace() {
         </div>
       </div>
 
-      {section === "floor" ? <LiveFloorMonitor /> : <CallbackPoolView />}
+      {section === "floor" && <LiveFloorMonitor />}
+      {section === "recordings" && <RecordingsQAView />}
+      {section === "callbacks" && <CallbackPoolView />}
     </div>
   );
 }

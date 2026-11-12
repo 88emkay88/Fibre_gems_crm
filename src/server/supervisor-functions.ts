@@ -184,7 +184,7 @@ const SEED_RECORDINGS: SupervisorRecording[] = [
 ];
 
 export const getRecordingsFn = createServerFn({ method: "GET" })
-  .validator((params?: { disposition?: string; min_seconds?: number }) => params ?? {})
+  .validator((params?: { disposition?: string | undefined; min_seconds?: number | undefined }) => params ?? {})
   .handler(async ({ data }) => {
     requireTeamLead(await getCurrentUser());
     return SEED_RECORDINGS.filter(
@@ -207,8 +207,42 @@ export const evaluateRecordingFn = createServerFn({ method: "POST" })
     }) => data,
   )
   .handler(async ({ data }) => {
-    requireTeamLead(await getCurrentUser());
+    const user = requireTeamLead(await getCurrentUser());
+    const recording = SEED_RECORDINGS.find((r) => r.id === data.recording_id);
+    if (!recording) throw new Error("Recording not found");
     const earned =
       data.greeting_score + data.pitch_score + data.objection_handling_score + data.closing_score + (data.compliance_verified ? 5 : 0);
-    return { success: true, score_percent: Math.round((earned / 25) * 100) };
+    const score_percent = Math.round((earned / 25) * 100);
+    recording.qa_evaluation = {
+      status: "graded",
+      score_percent,
+      reviewer: user.fullName,
+      feedback: data.feedback_notes,
+    };
+    return { success: true, score_percent };
   });
+
+export type SupervisorAgentStat = {
+  agent_code: string;
+  full_name: string;
+  calls_placed: number;
+  contacts: number;
+  sales: number;
+  conversion_rate_percent: number;
+  talk_seconds: number;
+  average_qa_score: number | null;
+};
+
+const SEED_AGENT_STATS: SupervisorAgentStat[] = [
+  { agent_code: "Mukona_T", full_name: "Mukona Tshifhiwa", calls_placed: 46, contacts: 31, sales: 9, conversion_rate_percent: 29, talk_seconds: 7420, average_qa_score: 90 },
+  { agent_code: "Naledi_M", full_name: "Naledi Mokoena", calls_placed: 38, contacts: 22, sales: 5, conversion_rate_percent: 23, talk_seconds: 5160, average_qa_score: null },
+  { agent_code: "Lerato_N", full_name: "Lerato Ndlovu", calls_placed: 51, contacts: 34, sales: 14, conversion_rate_percent: 41, talk_seconds: 8880, average_qa_score: 84 },
+];
+
+export const getAgentStatsFn = createServerFn({ method: "GET" })
+  .validator((params?: { date_from?: string; date_to?: string }) => params ?? {})
+  .handler(async () => {
+    requireTeamLead(await getCurrentUser());
+    return SEED_AGENT_STATS;
+  });
+
