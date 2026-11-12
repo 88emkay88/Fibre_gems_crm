@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedAgentRouteImport } from './routes/_authenticated/agent'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedTeamLeadRouteImport } from './routes/_authenticated/team-lead'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -39,18 +40,25 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedTeamLeadRoute = AuthenticatedTeamLeadRouteImport.update({
+  id: '/team-lead',
+  path: '/team-lead',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/agent': typeof AuthenticatedAgentRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/team-lead': typeof AuthenticatedTeamLeadRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/agent': typeof AuthenticatedAgentRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/team-lead': typeof AuthenticatedTeamLeadRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -59,12 +67,13 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/agent': typeof AuthenticatedAgentRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/team-lead': typeof AuthenticatedTeamLeadRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/agent' | '/dashboard'
+  fullPaths: '/' | '/admin' | '/agent' | '/dashboard' | '/team-lead'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/agent' | '/dashboard'
+  to: '/' | '/admin' | '/agent' | '/dashboard' | '/team-lead'
   id:
     | '__root__'
     | '/'
@@ -72,6 +81,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/agent'
     | '/_authenticated/dashboard'
+    | '/_authenticated/team-lead'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -116,6 +126,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/team-lead': {
+      id: '/_authenticated/team-lead'
+      path: '/team-lead'
+      fullPath: '/team-lead'
+      preLoaderRoute: typeof AuthenticatedTeamLeadRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -123,12 +140,14 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedAgentRoute: typeof AuthenticatedAgentRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedTeamLeadRoute: typeof AuthenticatedTeamLeadRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedAgentRoute: AuthenticatedAgentRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedTeamLeadRoute: AuthenticatedTeamLeadRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
