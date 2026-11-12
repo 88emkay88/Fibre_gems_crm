@@ -86,6 +86,16 @@ export async function setAgentStatusApi(status: "ready" | "paused", pauseCode?: 
   return { agent_status: status, pause_code: pauseCode, simulated: true };
 }
 
+export async function fetchLiveCallStatus() {
+  try {
+    const res = await fetch(`${API_BASE}/agent/status`);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
 export function jhbDateOffset(days: number) {
   return new Date(Date.now() + days * 86_400_000).toLocaleDateString("en-CA", {
     timeZone: "Africa/Johannesburg",

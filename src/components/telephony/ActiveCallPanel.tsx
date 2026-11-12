@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useRef,
   useState,
   type Dispatch,
@@ -10,7 +11,7 @@ import { toast } from "sonner";
 import { copyToClipboard } from "@/lib/utils";
 import type { AgentTelephonyState, Customer } from "./types";
 import { CallControls } from "./CallControls";
-import { formatCallTime } from "./telephony-service";
+import { formatCallTime, fetchLiveCallStatus } from "./telephony-service";
 import { stageForCustomer } from "./pipeline-stages";
 
 const PANEL_WIDTH = 340;
@@ -44,6 +45,53 @@ export function ActiveCallPanel({
   } | null>(null);
   const [position, setPosition] = useState<Position | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Auto-detect when the customer answers the call OR when the call ends via PBX polling
+  useEffect(() => {
+    if (!telephonyState.callProgress) return;
+
+    let isMounted = true;
+    const interval = setInterval(async () => {
+      try {
+        const live = await fetchLiveCallStatus();
+        if (!isMounted || !live) return;
+
+        // 1. While ringing: detect when customer answers
+        if (telephonyState.callProgress === "ringing") {
+          if (live.status === "INCALL" && !live.is_dead) {
+            setTelephonyState((prev) => {
+              if (prev.callProgress === "connected") return prev;
+              return {
+                ...prev,
+                callProgress: "connected",
+                callDurationSeconds: Math.max(prev.callDurationSeconds, 1),
+              };
+            });
+            toast.success("Call connected! Customer answered.");
+          }
+        }
+
+        // 2. While connected: detect when customer hangs up or channel goes dead
+        if (telephonyState.callProgress === "connected") {
+          if (live.is_dead || live.status === "PAUSED" || live.status === "DISPO") {
+            toast.info("Call ended by customer.");
+            setTelephonyState((prev) => ({
+              ...prev,
+              callProgress: null,
+              agentStatus: "ready",
+            }));
+          }
+        }
+      } catch (err) {
+        // ignore network hiccups
+      }
+    }, 1000);
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [telephonyState.callProgress, setTelephonyState]);
 
   const handlePointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     if ((e.target as HTMLElement).closest("button, input, select")) return;

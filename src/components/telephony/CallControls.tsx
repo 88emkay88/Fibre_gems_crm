@@ -34,6 +34,7 @@ export async function endActiveCall(
       return {
         ...prev,
         agentStatus: "ready",
+        callProgress: null,
         isOnHold: false,
         isMuted: false,
         callDurationSeconds: 0,
@@ -47,6 +48,7 @@ export async function endActiveCall(
       return {
         ...prev,
         agentStatus: "ready",
+        callProgress: null,
         isOnHold: false,
         isMuted: false,
         callDurationSeconds: 0,
