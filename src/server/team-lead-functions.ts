@@ -4,7 +4,7 @@ import { getCurrentUser, type AuthUser } from "./auth";
 import { getDb, isMockMode, mockStore } from "./db";
 import { customers, profiles } from "./db/schema";
 
-function requireTeamLead(user: AuthUser | null): AuthUser {
+export function requireTeamLead(user: AuthUser | null): AuthUser {
   if (!user) throw new Error("Unauthorized");
   if (user.role !== "team_leader" && user.role !== "admin") throw new Error("Forbidden");
   return user;

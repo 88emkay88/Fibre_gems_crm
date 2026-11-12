@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -95,22 +94,7 @@ export function CallbackPoolView() {
   }
 
   return (
-    <section className="space-y-5 p-4 md:p-8">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">Callback pool</h1>
-          <p className="text-sm text-muted-foreground">
-            Scheduled callbacks across the whole floor. Reassign overdue ones to an available agent.
-          </p>
-        </div>
-        <Link
-          to="/agent"
-          className="rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-        >
-          Agent view
-        </Link>
-      </div>
-
+    <section className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-1 rounded-full border border-border bg-card p-1">
           {TABS.map(({ id, label }) => (

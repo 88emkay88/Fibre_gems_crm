@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { getCurrentUserFn } from "@/server/functions";
-import { CallbackPoolView } from "@/components/team-lead/CallbackPoolView";
+import { TeamLeadWorkspace } from "@/components/team-lead/TeamLeadWorkspace";
 
 export const Route = createFileRoute("/_authenticated/team-lead")({
   beforeLoad: async () => {
@@ -11,8 +11,8 @@ export const Route = createFileRoute("/_authenticated/team-lead")({
   head: () => ({
     meta: [
       { title: "Team Lead Floor — FibreGems CRM" },
-      { name: "description", content: "Review overdue callbacks across the floor and reassign them to agents." },
+      { name: "description", content: "Watch the live floor, step in on calls, and reassign callbacks." },
     ],
   }),
-  component: CallbackPoolView,
+  component: TeamLeadWorkspace,
 });
