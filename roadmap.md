@@ -9,4 +9,5 @@
 - [x] Build customer directory, capture, duplicate handling, and updates
 - [x] Build Agility import and administration views
 - [ ] Build protected team-lead portal for live floor, recording QA, and callback redistribution
+- [ ] Connect agent and supervisor screens to the REMI live WebSocket streams and floating audio dock
 - [ ] Validate database permissions, build health, and responsive UI
