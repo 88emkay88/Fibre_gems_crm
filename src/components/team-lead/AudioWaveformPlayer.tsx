@@ -12,6 +12,30 @@ export function AudioWaveformPlayer({ src, title }: { src: string; title: string
   const [speed, setSpeed] = useState(1);
   const [failed, setFailed] = useState(false);
 
+  // No URL — recording was never saved
+  const noUrl = !src || src.trim() === "";
+  if (noUrl) {
+    return (
+      <div className="rounded-2xl border border-border bg-card p-4">
+        <p className="text-sm font-semibold text-foreground mb-2 truncate">{title}</p>
+        <p className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-300">
+          No recording URL found for this call. VICIdial may not have saved a recording, or the agent used a manual dial that isn't tracked.
+        </p>
+      </div>
+    );
+  }
+
+  // Resolve proxy or direct URL for audio playback (API runs on :8000)
+  const resolvedSrc = (() => {
+    if (src.startsWith("/")) {
+      if (typeof window !== "undefined") {
+        return `${window.location.protocol}//${window.location.hostname}:8000${src}`;
+      }
+      return `http://127.0.0.1:8000${src}`;
+    }
+    return src;
+  })();
+
   function togglePlay() {
     const audio = audioRef.current;
     if (!audio) return;
@@ -39,18 +63,20 @@ export function AudioWaveformPlayer({ src, title }: { src: string; title: string
     <div className="space-y-4 rounded-2xl border border-border bg-card p-4">
       <div className="flex items-center justify-between gap-3">
         <p className="truncate text-sm font-semibold text-foreground">{title}</p>
-        <a
-          href={src}
-          download
-          className="shrink-0 rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
-        >
-          Download MP3
-        </a>
+        {!failed && (
+          <a
+            href={resolvedSrc}
+            download
+            className="shrink-0 rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
+          >
+            Download MP3
+          </a>
+        )}
       </div>
 
       <audio
         ref={audioRef}
-        src={src}
+        src={resolvedSrc}
         preload="metadata"
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
@@ -61,8 +87,8 @@ export function AudioWaveformPlayer({ src, title }: { src: string; title: string
       />
 
       {failed ? (
-        <p className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
-          This recording could not be loaded. The recording server may be offline.
+        <p className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-300">
+          No recording audio is available for this call session. The call was either not recorded by VICIdial or the audio file has not finished processing on the PBX.
         </p>
       ) : (
         <>

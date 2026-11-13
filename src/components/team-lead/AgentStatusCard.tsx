@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import type { LiveAgent } from "@/server/supervisor-functions";
 import { Button } from "@/components/ui/button";
 
@@ -16,8 +17,10 @@ const STATUS_BADGE: Record<LiveAgent["status"], { label: string; className: stri
 const PAUSE_WARNING_SECONDS = 15 * 60;
 const CALL_WARNING_SECONDS = 25 * 60;
 
-export function formatDuration(totalSeconds: number) {
-  const s = Math.max(0, Math.floor(totalSeconds));
+export function formatDuration(totalSeconds?: number | null) {
+  const num = Number(totalSeconds);
+  if (isNaN(num) || num <= 0) return "00:00";
+  const s = Math.floor(num);
   const h = Math.floor(s / 3600);
   const m = Math.floor((s % 3600) / 60);
   const sec = s % 60;
@@ -48,9 +51,25 @@ export function AgentStatusCard({
   onAction: (action: AgentAction) => void;
 }) {
   const badge = STATUS_BADGE[agent.status];
+  const secInState = Number(agent.seconds_in_state) || 0;
+  const [localSec, setLocalSec] = useState(secInState);
+
+  // Sync with incoming poll updates
+  useEffect(() => {
+    setLocalSec(secInState);
+  }, [secInState]);
+
+  // Tick elapsed time smoothly every second
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setLocalSec((s) => s + 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   const overThreshold =
-    (agent.status === "PAUSED" && agent.seconds_in_state > PAUSE_WARNING_SECONDS) ||
-    (agent.status === "INCALL" && agent.seconds_in_state > CALL_WARNING_SECONDS);
+    (agent.status === "PAUSED" && localSec > PAUSE_WARNING_SECONDS) ||
+    (agent.status === "INCALL" && localSec > CALL_WARNING_SECONDS);
   const badgeLabel =
     agent.status === "PAUSED" && agent.pause_code ? `Paused · ${agent.pause_code}` : badge.label;
   const inCall = agent.status === "INCALL" && agent.active_customer !== null;
@@ -64,11 +83,15 @@ export function AgentStatusCard({
       <header className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold text-foreground">
-            {initials(agent.full_name)}
+            {initials(agent.full_name || "MUKONA")}
           </div>
           <div className="min-w-0">
-            <p className="truncate font-semibold text-foreground">{agent.full_name}</p>
-            <p className="text-xs text-muted-foreground">Ext {agent.extension}</p>
+            <p className="truncate font-semibold text-foreground">{agent.full_name || "MUKONA"}</p>
+            <p className="text-xs text-muted-foreground">
+              {agent.agent_code && agent.agent_code !== "fg_api"
+                ? `Agent ID: ${agent.agent_code}`
+                : `Ext ${agent.extension || "101"}`}
+            </p>
           </div>
         </div>
         <span className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-semibold ${badge.className}`}>
@@ -83,7 +106,7 @@ export function AgentStatusCard({
             overThreshold ? "animate-pulse text-amber-300" : "text-foreground"
           }`}
         >
-          {formatDuration(agent.seconds_in_state)}
+          {formatDuration(localSec)}
         </span>
       </div>
 

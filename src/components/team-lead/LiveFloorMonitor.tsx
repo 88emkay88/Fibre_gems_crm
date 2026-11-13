@@ -2,16 +2,16 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { getLiveAgentsFn, hangupAgentFn, pauseAgentFn, startSupervisionFn } from "@/server/supervisor-functions";
 import { AgentStatusCard, type AgentAction } from "./AgentStatusCard";
+import { getStoredTeamLeadSettings } from "./TeamLeadSettings";
 
-const SUPERVISOR_EXTENSION = "101";
 const LIVE_QUERY_KEY = ["supervisor-live-agents"];
 
-function successMessage(action: AgentAction) {
+function successMessage(action: AgentAction, supervisorExt: string) {
   switch (action.kind) {
     case "monitor":
-      if (action.mode === "LISTEN") return `Connecting silent monitor on your extension ${SUPERVISOR_EXTENSION}...`;
-      if (action.mode === "WHISPER") return `Connecting whisper coaching on your extension ${SUPERVISOR_EXTENSION}...`;
-      return `Connecting barge conference on your extension ${SUPERVISOR_EXTENSION}...`;
+      if (action.mode === "LISTEN") return `Connecting silent monitor on your extension ${supervisorExt}...`;
+      if (action.mode === "WHISPER") return `Connecting whisper coaching on your extension ${supervisorExt}...`;
+      return `Connecting barge conference on your extension ${supervisorExt}...`;
     case "pause":
       return `Agent ${action.agent.full_name} has been remotely paused.`;
     case "hangup":
@@ -19,13 +19,13 @@ function successMessage(action: AgentAction) {
   }
 }
 
-async function runAction(action: AgentAction): Promise<unknown> {
+async function runAction(action: AgentAction, supervisorExt: string): Promise<unknown> {
   switch (action.kind) {
     case "monitor":
       return await startSupervisionFn({
         data: {
           target_agent_extension: action.agent.extension,
-          supervisor_extension: SUPERVISOR_EXTENSION,
+          supervisor_extension: supervisorExt,
           mode: action.mode,
         },
       });
@@ -40,17 +40,20 @@ async function runAction(action: AgentAction): Promise<unknown> {
 
 export function LiveFloorMonitor() {
   const qc = useQueryClient();
+  const settings = getStoredTeamLeadSettings();
+  const supervisorExt = settings.supervisorExtension || "101";
+  const refreshInterval = (settings.refreshIntervalSeconds || 2) * 1000;
 
   const liveQuery = useQuery({
     queryKey: LIVE_QUERY_KEY,
     queryFn: () => getLiveAgentsFn(),
-    refetchInterval: 2000,
+    refetchInterval: refreshInterval,
   });
 
   const action = useMutation({
-    mutationFn: runAction,
+    mutationFn: (act: AgentAction) => runAction(act, supervisorExt),
     onSuccess: (_res, vars) => {
-      toast.success(successMessage(vars));
+      toast.success(successMessage(vars, supervisorExt));
       void qc.invalidateQueries({ queryKey: LIVE_QUERY_KEY });
     },
     onError: (err) => toast.error(err instanceof Error ? err.message : "Supervisor action failed"),
@@ -105,9 +108,9 @@ export function LiveFloorMonitor() {
         </p>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {agents.map((agent) => (
+          {agents.map((agent, idx) => (
             <AgentStatusCard
-              key={agent.agent_id}
+              key={agent.agent_id || agent.agent_code || `agent-${idx}`}
               agent={agent}
               pending={action.isPending}
               onAction={handleAction}

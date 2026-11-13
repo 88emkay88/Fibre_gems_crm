@@ -109,7 +109,7 @@ export function RecordingsQAView() {
                   <td className="p-3 font-mono tabular-nums text-muted-foreground">{formatDuration(r.duration_seconds)}</td>
                   <td className="p-3 text-muted-foreground">{r.disposition}</td>
                   <td className="p-3">
-                    {r.qa_evaluation.status === "graded" ? (
+                    {r.qa_evaluation?.status === "graded" ? (
                       <span className="rounded-full border border-emerald-500/50 bg-emerald-500/15 px-2.5 py-1 text-xs font-semibold text-emerald-400">
                         Graded {r.qa_evaluation.score_percent}%
                       </span>
@@ -124,7 +124,9 @@ export function RecordingsQAView() {
                       <button
                         type="button"
                         onClick={() => setPlaying(r)}
-                        className="rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
+                        disabled={!r.recording_url}
+                        className="rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+                        title={r.recording_url ? "Play recording" : "No recording available"}
                       >
                         Listen
                       </button>
@@ -133,7 +135,7 @@ export function RecordingsQAView() {
                         onClick={() => setGrading(r)}
                         className="rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition-opacity hover:opacity-90"
                       >
-                        {r.qa_evaluation.status === "graded" ? "Re-grade" : "Grade call"}
+                        {r.qa_evaluation?.status === "graded" ? "Re-grade" : "Grade call"}
                       </button>
                     </div>
                   </td>
