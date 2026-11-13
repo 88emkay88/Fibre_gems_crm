@@ -10,7 +10,7 @@ export function useTelephonySocket<T>({
   onMessage,
 }: {
   path: string;
-  query?: Record<string, string>;
+  query?: Record<string, string> | undefined;
   enabled?: boolean;
   onMessage: (message: T) => void;
 }) {

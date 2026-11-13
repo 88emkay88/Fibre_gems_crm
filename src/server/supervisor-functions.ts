@@ -8,7 +8,7 @@ async function backendFetch<T>(path: string, options: RequestInit = {}): Promise
     const token = process.env["REMI_API_TOKEN"] || process.env["VICIDIAL_API_TOKEN"];
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
-    const res = await fetch(`${BACKEND_BASE}${path}`, {
+    const res = await fetch(`${backendBase}${path}`, {
       ...options,
       signal: controller.signal,
       headers: {
