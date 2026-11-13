@@ -169,12 +169,6 @@ export function TeamLeadWorkspace() {
               <div className="text-xs text-muted-foreground font-mono">FibreGems / Supervisor Floor</div>
               <div className="text-base font-bold text-white flex items-center gap-2">
                 <span>{activeNavItem?.label}</span>
-                {view === "floor" && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#22C55E]/15 px-2.5 py-0.5 text-[10px] font-bold text-[#22C55E]">
-                    <span className="size-1.5 rounded-full bg-[#22C55E] animate-ping" />
-                    LIVE PBX
-                  </span>
-                )}
               </div>
             </div>
           </div>

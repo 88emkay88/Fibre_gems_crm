@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getRecordingsFn, type SupervisorRecording } from "@/server/supervisor-functions";
-import { AudioWaveformPlayer } from "./AudioWaveformPlayer";
+import { DraggableCallDock } from "./DraggableCallDock";
 import { QAEvaluationDrawer } from "./QAEvaluationDrawer";
 import { formatDuration } from "./AgentStatusCard";
 
@@ -67,7 +67,14 @@ export function RecordingsQAView() {
         </label>
       </div>
 
-      {playing && <AudioWaveformPlayer key={playing.id} src={playing.recording_url} title={`${playing.agent_name} · ${playing.customer_name}`} />}
+      {playing && (
+        <DraggableCallDock
+          key={playing.id}
+          session={{ kind: "recording", recording: playing }}
+          onClose={() => setPlaying(null)}
+          onModeChange={async () => undefined}
+        />
+      )}
 
       {query.isPending && <p className="text-sm text-muted-foreground">Loading recordings…</p>}
 

@@ -7,7 +7,6 @@ export interface TeamLeadSettingsData {
   maxPauseMinutes: number;
   maxCallMinutes: number;
   defaultMonitorMode: "LISTEN" | "WHISPER" | "BARGE";
-  refreshIntervalSeconds: number;
 }
 
 export const DEFAULT_SETTINGS: TeamLeadSettingsData = {
@@ -15,7 +14,6 @@ export const DEFAULT_SETTINGS: TeamLeadSettingsData = {
   maxPauseMinutes: 15,
   maxCallMinutes: 25,
   defaultMonitorMode: "LISTEN",
-  refreshIntervalSeconds: 2,
 };
 
 export function getStoredTeamLeadSettings(): TeamLeadSettingsData {
@@ -135,38 +133,9 @@ export function TeamLeadSettingsView() {
           </div>
         </div>
 
-        {/* Polling Interval */}
-        <div className="rounded-2xl border border-white/10 bg-[#121212]/95 p-5 backdrop-blur-xl space-y-4">
-          <div className="flex items-center gap-2.5 border-b border-white/5 pb-3">
-            <div className="grid size-8 place-items-center rounded-lg bg-[#22C55E]/15 text-[#22C55E]">
-              <RefreshCw className="size-4" />
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-white">Live Floor Polling Speed</h3>
-              <p className="text-xs text-muted-foreground">How frequently the agent grid queries real-time PBX statuses.</p>
-            </div>
-          </div>
-
-          <div className="pt-1">
-            <div className="flex items-center gap-3">
-              {[1, 2, 5].map((sec) => (
-                <button
-                  key={sec}
-                  type="button"
-                  onClick={() => setSettings({ ...settings, refreshIntervalSeconds: sec })}
-                  className={`flex items-center gap-1.5 rounded-xl border px-4 py-2 text-xs font-semibold transition ${
-                    settings.refreshIntervalSeconds === sec
-                      ? "border-[#22C55E] bg-[#22C55E]/15 text-[#22C55E]"
-                      : "border-white/10 bg-white/5 text-white/60 hover:bg-white/10"
-                  }`}
-                >
-                  <Radio className="size-3" />
-                  <span>Every {sec} second{sec > 1 ? "s" : ""}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
+        <p className="flex items-center gap-2 border-t border-border pt-4 text-xs text-muted-foreground">
+          <Radio className="size-4 text-success" /> Live floor updates arrive automatically from the telephony service.
+        </p>
 
         <div className="flex justify-end pt-2">
           <button

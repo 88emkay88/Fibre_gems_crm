@@ -12,6 +12,16 @@ import {
 
 const API_BASE = (import.meta.env["VITE_API_BASE_URL"] as string) || "http://127.0.0.1:8000/api/v1";
 
+/** Build the REMI WebSocket URL only when called from a browser event/effect. */
+export function getTelephonyWebSocketUrl(path: string, params?: URLSearchParams) {
+  const configuredBase = import.meta.env["VITE_API_BASE_URL"] as string | undefined;
+  const base = configuredBase || `${window.location.protocol}//${window.location.hostname}:8000/api/v1`;
+  const url = new URL(path.replace(/^\/+/, ""), `${base.replace(/\/+$/, "")}/`);
+  url.protocol = url.protocol === "https:" || url.protocol === "wss:" ? "wss:" : "ws:";
+  params?.forEach((value, key) => url.searchParams.set(key, value));
+  return url.toString();
+}
+
 export const ESCALATION_LEVELS = ["Level 2 - Supervisor Alert", "Level 3 - Operations Escalation"];
 
 function errorMessage(err: unknown) {

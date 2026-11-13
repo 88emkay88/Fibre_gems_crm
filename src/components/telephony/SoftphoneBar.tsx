@@ -11,6 +11,7 @@ import {
 import { endActiveCall } from "./CallControls";
 import { ActiveCallPanel } from "./ActiveCallPanel";
 import { OUTCOMES, outcomeFor } from "./pipeline-stages";
+import { getCurrentUserFn } from "@/server/functions";
 
 const PAUSE_CODES = ["LUNCH", "TEA", "MEETING", "TRAINING", "WRAPUP"];
 interface SoftphoneBarProps {
@@ -38,17 +39,20 @@ export function SoftphoneBar({
   const [callbackDate, setCallbackDate] = useState(() => jhbDateOffset(1));
   const [pauseMenuOpen, setPauseMenuOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [agentCode, setAgentCode] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void getCurrentUserFn().then((result) => {
+      if (active) setAgentCode(result?.user?.agentCode ?? null);
+    }).catch(() => {
+      if (active) setAgentCode(null);
+    });
+    return () => { active = false; };
+  }, []);
 
   const isCallActive =
     telephonyState.agentStatus === "in_call" || telephonyState.agentStatus === "dialing";
-
-  useEffect(() => {
-    if (telephonyState.agentStatus !== "in_call") return;
-    const interval = setInterval(() => {
-      setTelephonyState((prev) => ({ ...prev, callDurationSeconds: prev.callDurationSeconds + 1 }));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [telephonyState.agentStatus, setTelephonyState]);
 
   const handleTogglePause = async (code?: string) => {
     const newStatus = telephonyState.agentStatus === "paused" ? "ready" : "paused";
@@ -129,9 +133,10 @@ export function SoftphoneBar({
           telephonyState={telephonyState}
           setTelephonyState={setTelephonyState}
           activeCustomer={activeCustomer}
+          {...(agentCode ? { agentCode } : {})}
           onLogOutcome={onLogOutcome}
-          onOpenCustomerDetails={onOpenCustomerDetails}
-          onCaptureReferral={onCaptureReferral}
+          {...(onOpenCustomerDetails ? { onOpenCustomerDetails } : {})}
+          {...(onCaptureReferral ? { onCaptureReferral } : {})}
         />
       )}
 

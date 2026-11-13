@@ -2,11 +2,10 @@ import { createServerFn } from "@tanstack/react-start";
 import { getCurrentUser } from "./auth";
 import { requireTeamLead } from "./team-lead-functions";
 
-// Connect to real FastAPI backend (http://127.0.0.1:8000), falling back gracefully to seed data if unreachable
-const BACKEND_BASE = (process.env["REMI_API_URL"] || process.env["VICIDIAL_API_URL"] || "http://127.0.0.1:8000").replace(/\/+$/, "");
-
 async function backendFetch<T>(path: string, options: RequestInit = {}): Promise<T | null> {
   try {
+    const backendBase = (process.env["REMI_API_URL"] || process.env["VICIDIAL_API_URL"] || "http://127.0.0.1:8000").replace(/\/+$/, "");
+    const token = process.env["REMI_API_TOKEN"] || process.env["VICIDIAL_API_TOKEN"];
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
     const res = await fetch(`${BACKEND_BASE}${path}`, {
@@ -14,6 +13,7 @@ async function backendFetch<T>(path: string, options: RequestInit = {}): Promise
       signal: controller.signal,
       headers: {
         "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...(options.headers || {}),
       },
     });
@@ -133,16 +133,35 @@ export const startSupervisionFn = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     requireTeamLead(await getCurrentUser());
+    if (!data.target_agent_extension.trim() || !data.supervisor_extension.trim()) {
+      throw new Error("Choose a valid agent and supervisor extension");
+    }
+    if (!("LISTEN WHISPER BARGE" as string).split(" ").includes(data.mode)) {
+      throw new Error("Unsupported supervision mode");
+    }
     const res = await backendFetch<{ success: boolean; message: string; target_agent: string }>(
       "/api/v1/supervisor/monitor",
       { method: "POST", body: JSON.stringify(data) },
     );
-    if (res) return res;
-    return {
-      success: true,
-      message: `Supervision channel dispatched to extension ${data.supervisor_extension} in ${data.mode} mode`,
-      target_agent: data.target_agent_extension,
-    };
+    if (!res?.success) throw new Error("The monitoring service did not confirm the connection");
+    return res;
+  });
+
+export const stopSupervisionFn = createServerFn({ method: "POST" })
+  .validator((data: { supervisor_extension: string }) => {
+    const extension = typeof data?.supervisor_extension === "string" ? data.supervisor_extension.trim() : "";
+    if (!/^[A-Za-z0-9_-]{1,20}$/.test(extension)) throw new Error("Invalid supervisor extension");
+    return { supervisor_extension: extension };
+  })
+  .handler(async ({ data }) => {
+    requireTeamLead(await getCurrentUser());
+    const query = new URLSearchParams({ supervisor_extension: data.supervisor_extension });
+    const result = await backendFetch<{ success: boolean; message?: string }>(
+      `/api/v1/supervisor/monitor/stop?${query.toString()}`,
+      { method: "POST" },
+    );
+    if (!result?.success) throw new Error("Could not stop monitoring. Check the monitoring service and try again.");
+    return result;
   });
 
 export const pauseAgentFn = createServerFn({ method: "POST" })
