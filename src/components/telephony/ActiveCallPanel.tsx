@@ -2,6 +2,7 @@ import {
   useEffect,
   useRef,
   useState,
+  useCallback,
   type Dispatch,
   type PointerEvent as ReactPointerEvent,
   type SetStateAction,
@@ -11,8 +12,9 @@ import { toast } from "sonner";
 import { copyToClipboard } from "@/lib/utils";
 import type { AgentTelephonyState, Customer } from "./types";
 import { CallControls } from "./CallControls";
-import { formatCallTime, fetchLiveCallStatus } from "./telephony-service";
+import { formatCallTime } from "./telephony-service";
 import { stageForCustomer } from "./pipeline-stages";
+import { useTelephonySocket, type TelephonySocketStatus } from "./use-telephony-socket";
 
 const PANEL_WIDTH = 340;
 const EDGE_MARGIN = 12;
@@ -21,6 +23,7 @@ type ActiveCallPanelProps = {
   telephonyState: AgentTelephonyState;
   setTelephonyState: Dispatch<SetStateAction<AgentTelephonyState>>;
   activeCustomer: Customer | null;
+  agentCode?: string | null;
   onLogOutcome: () => void;
   onOpenCustomerDetails?: () => void;
   onCaptureReferral?: (customer: Customer) => void;
@@ -32,6 +35,7 @@ export function ActiveCallPanel({
   telephonyState,
   setTelephonyState,
   activeCustomer,
+  agentCode,
   onLogOutcome,
   onOpenCustomerDetails,
   onCaptureReferral,
@@ -46,51 +50,72 @@ export function ActiveCallPanel({
   const [position, setPosition] = useState<Position | null>(null);
   const [copied, setCopied] = useState(false);
 
-  // Auto-detect when the customer answers the call OR when the call ends via PBX polling
-  useEffect(() => {
-    if (!telephonyState.callProgress) return;
+  type CallStateEvent = {
+    type?: string;
+    agent_status?: string;
+    call_state?: string;
+    duration_seconds?: number;
+    lead_id?: string | number | null;
+  };
 
-    let isMounted = true;
-    const interval = setInterval(async () => {
-      try {
-        const live = await fetchLiveCallStatus();
-        if (!isMounted || !live) return;
+  const onCallState = useCallback((event: CallStateEvent) => {
+    if (event.type && event.type !== "CALL_STATE") return;
+    const callState = event.call_state?.toLowerCase();
+    const agentStatus = event.agent_status?.toLowerCase();
+    const duration = Number.isFinite(event.duration_seconds) ? Math.max(0, Math.floor(event.duration_seconds ?? 0)) : 0;
+    const leadId = event.lead_id == null ? undefined : String(event.lead_id);
 
-        // 1. While ringing: detect when customer answers
-        if (telephonyState.callProgress === "ringing") {
-          if (live.status === "INCALL" && !live.is_dead) {
-            setTelephonyState((prev) => {
-              if (prev.callProgress === "connected") return prev;
-              return {
-                ...prev,
-                callProgress: "connected",
-                callDurationSeconds: Math.max(prev.callDurationSeconds, 1),
-              };
-            });
-            toast.success("Call connected! Customer answered.");
-          }
-        }
+    if (callState === "ringing") {
+      setTelephonyState((previous) => ({
+        ...previous,
+        agentStatus: "in_call",
+        callProgress: "ringing",
+        callDurationSeconds: 0,
+        ...(leadId ? { viciLeadId: leadId } : {}),
+      }));
+      return;
+    }
 
-        // 2. While connected: detect when customer hangs up or channel goes dead
-        if (telephonyState.callProgress === "connected") {
-          if (live.is_dead || live.status === "PAUSED" || live.status === "DISPO") {
-            toast.info("Call ended by customer.");
-            setTelephonyState((prev) => ({
-              ...prev,
-              callProgress: null,
-              agentStatus: "ready",
-            }));
-          }
-        }
-      } catch (err) {
-        // ignore network hiccups
+    if (callState === "connected") {
+      if (telephonyState.callProgress !== "connected") toast.success("Call connected. Customer answered.");
+      setTelephonyState((previous) => ({
+        ...previous,
+        agentStatus: "in_call",
+        callProgress: "connected",
+        callDurationSeconds: duration,
+        ...(leadId ? { viciLeadId: leadId } : {}),
+      }));
+      return;
+    }
+
+    if (callState === "idle" || callState === "paused") {
+      if (telephonyState.callProgress === "connected" || telephonyState.callProgress === "ringing") {
+        toast.info("Call ended. Choose an outcome to continue.");
       }
-    }, 1000);
+      setTelephonyState((previous) => ({
+        ...previous,
+        agentStatus: callState === "paused" || agentStatus === "paused" ? "paused" : "ready",
+        callProgress: null,
+        callDurationSeconds: duration || previous.callDurationSeconds,
+      }));
+    }
+  }, [setTelephonyState, telephonyState.callProgress]);
 
-    return () => {
-      isMounted = false;
-      clearInterval(interval);
-    };
+  const socket = useTelephonySocket<CallStateEvent>({
+    path: "ws/telephony",
+    query: agentCode ? { agent_code: agentCode } : undefined,
+    enabled: Boolean(agentCode),
+    onMessage: onCallState,
+  });
+
+  useEffect(() => {
+    if (telephonyState.callProgress !== "connected") return;
+    const timer = setInterval(() => {
+      setTelephonyState((previous) => previous.callProgress === "connected"
+        ? { ...previous, callDurationSeconds: previous.callDurationSeconds + 1 }
+        : previous);
+    }, 1000);
+    return () => clearInterval(timer);
   }, [telephonyState.callProgress, setTelephonyState]);
 
   const handlePointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -177,6 +202,7 @@ export function ActiveCallPanel({
           <span className={`size-1.5 rounded-full ${stage.accent}`} />
           <span className="truncate max-w-[120px]">{stage.title}</span>
         </span>
+        <span className="sr-only" aria-live="polite">Live call feed {socket.status}</span>
       </div>
 
       {/* Warning Box if Number Does Not Exist */}
@@ -316,21 +342,6 @@ export function ActiveCallPanel({
                 RINGING...
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                setTelephonyState((prev) => ({
-                  ...prev,
-                  callProgress: "connected",
-                  callDurationSeconds: 1,
-                }));
-                toast.success("Call connected! Timer started.");
-              }}
-              className="mt-1 flex items-center gap-1.5 rounded-lg bg-[#22C55E] px-3 py-1 text-xs font-bold text-black shadow-sm transition hover:bg-[#22C55E]/90 active:scale-95 cursor-pointer"
-            >
-              <Phone className="size-3" />
-              <span>Customer Answered</span>
-            </button>
           </div>
         ) : (
           <p className="font-mono text-3xl font-extrabold tracking-wider tabular-nums text-white">
@@ -344,7 +355,7 @@ export function ActiveCallPanel({
         telephonyState={telephonyState}
         setTelephonyState={setTelephonyState}
         onLogOutcome={onLogOutcome}
-        onOpenCustomerDetails={onOpenCustomerDetails}
+        {...(onOpenCustomerDetails ? { onOpenCustomerDetails } : {})}
       />
     </div>
   );
